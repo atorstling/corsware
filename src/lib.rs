@@ -121,11 +121,14 @@ impl AroundMiddleware for CorsMiddleware {
                 // Normal request
                 // 1.If the Origin header is not present terminate this set of steps. The request is
                 // outside the scope of this specification.
+                let has_origin: bool;
+                {
                 let maybe_origin = req.headers.get::<Origin>();
-                if maybe_origin.is_none() {
+                has_origin = maybe_origin.is_some();
+                }
+                if !has_origin {
                     return handler.handle(req); 
                 }
-                let origin = maybe_origin.unwrap();
                 //
                 // 2.If the value of the Origin header is not a case-sensitive match for any of the
                 // values in list of origins, do not set any additional headers and terminate this
@@ -150,6 +153,7 @@ impl AroundMiddleware for CorsMiddleware {
                 match result {
                     Ok(mut res) => {
                         // And set CORS headers
+                        let origin = req.headers.get::<Origin>().unwrap();
                         res.headers.set(AccessControlAllowOrigin::Value(format!("{}", origin)));
                         Ok(res)
                     }
