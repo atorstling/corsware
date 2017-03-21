@@ -1,0 +1,10 @@
+[package]
+name = "iron-cors2"
+version = "0.1.0"
+authors = ["Alexander Torstling <alexander@torstling.com>"]
+
+[dependencies]
+iron = "0.5.1"
+unicase = "1.4.0"
+router = "0.5.1"
+hyper = "0.10.5"
