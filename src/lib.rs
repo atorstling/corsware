@@ -10,6 +10,7 @@ use iron::headers::{Origin,
                     AccessControlRequestMethod,
                     AccessControlAllowOrigin,
                     AccessControlAllowHeaders,
+                    AccessControlMaxAge,
                     AccessControlAllowMethods};
 use iron::middleware::{AroundMiddleware, Handler};
 
@@ -88,6 +89,7 @@ impl AroundMiddleware for CorsMiddleware {
                 //
                 // 8. Optionally add a single Access-Control-Max-Age header with as value the amount
                 // of seconds the user agent is allowed to cache the result of the request.
+                res.headers.set(AccessControlMaxAge(60*60));
                 //
                 // 9. If method is a simple method this step may be skipped.
                 //
@@ -115,11 +117,15 @@ impl AroundMiddleware for CorsMiddleware {
                 // Since the list of headers can be unbounded, simply returning supported headers
                 // from Access-Control-Allow-Headers can be enough.
                 Ok(res)
-
             } else {
                 // Normal request
                 // 1.If the Origin header is not present terminate this set of steps. The request is
                 // outside the scope of this specification.
+                let maybe_origin = req.headers.get::<Origin>();
+                if maybe_origin.is_none() {
+                    return handler.handle(req); 
+                }
+                let origin = maybe_origin.unwrap();
                 //
                 // 2.If the value of the Origin header is not a case-sensitive match for any of the
                 // values in list of origins, do not set any additional headers and terminate this
@@ -142,10 +148,10 @@ impl AroundMiddleware for CorsMiddleware {
                 // given in the list of exposed headers.
                 let result = handler.handle(req);
                 match result {
-                    Ok(mut resp) => {
+                    Ok(mut res) => {
                         // And set CORS headers
-                        resp.headers.set(AccessControlAllowOrigin::Value("*".to_string()));
-                        Ok(resp)
+                        res.headers.set(AccessControlAllowOrigin::Value(format!("{}", origin)));
+                        Ok(res)
                     }
                     _ => result
                 }
@@ -170,6 +176,7 @@ mod tests {
                     AccessControlRequestMethod,
                     AccessControlAllowOrigin,
                     AccessControlAllowHeaders,
+                    AccessControlMaxAge,
                     AccessControlAllowMethods};
     use iron::middleware::{AroundMiddleware, Handler};
     use iron::method::Method;
@@ -244,5 +251,7 @@ mod tests {
         assert_eq!(format!("{}", allow_headers) , "Content-Type, X-Requested-With");
         let allow_methods = res.headers.get::<AccessControlAllowMethods>().unwrap();
         assert_eq!(format!("{}", allow_methods) , "GET, PUT, POST");
+        let max_age = res.headers.get::<AccessControlMaxAge>().unwrap();
+        assert_eq!(max_age.0, 60*60u32);
 	}
 }
