@@ -121,11 +121,7 @@ impl AroundMiddleware for CorsMiddleware {
                 // Normal request
                 // 1.If the Origin header is not present terminate this set of steps. The request is
                 // outside the scope of this specification.
-                let has_origin: bool;
-                {
-                let maybe_origin = req.headers.get::<Origin>();
-                has_origin = maybe_origin.is_some();
-                }
+                let has_origin = req.headers.get::<Origin>().is_some();
                 if !has_origin {
                     return handler.handle(req); 
                 }
