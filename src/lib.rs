@@ -6,7 +6,6 @@ use iron::prelude::*;
 use iron::method::Method;
 use iron::status;
 use iron::headers::{Origin,
-					ContentType,
                     AccessControlRequestMethod,
                     AccessControlAllowOrigin,
                     AccessControlAllowHeaders,
@@ -14,7 +13,7 @@ use iron::headers::{Origin,
                     AccessControlAllowMethods};
 use iron::middleware::{AroundMiddleware, Handler};
 
-struct CorsMiddleware;
+pub struct CorsMiddleware;
 impl AroundMiddleware for CorsMiddleware {
 
     fn around(self, handler: Box<Handler>) -> Box<Handler> {
@@ -172,13 +171,11 @@ mod tests {
 	use self::hyper::header::Headers;
 	use std::io::Read;
     use iron::headers::{Origin,
-					ContentType,
                     AccessControlRequestMethod,
                     AccessControlAllowOrigin,
                     AccessControlAllowHeaders,
                     AccessControlMaxAge,
                     AccessControlAllowMethods};
-    use iron::middleware::{AroundMiddleware, Handler};
     use iron::method::Method;
     use super::CorsMiddleware;
     use std::str::FromStr;
@@ -191,9 +188,8 @@ mod tests {
 	impl AutoServer {
 		pub fn new() -> AutoServer {
 			let mut router = Router::new();
-			router.get("/a",
-               |_: &mut Request| Ok(Response::with((status::ImATeapot, ""))),
-               "get_a");
+            let handler = |_: &mut Request| Ok(Response::with((status::ImATeapot, "")));
+			router.get("/a", handler,  "get_a");
             let mut chain = Chain::new(router);
             chain.link_around(CorsMiddleware);
     		let l = Iron::new(chain).http(format!("localhost:0")).unwrap();
@@ -240,7 +236,7 @@ mod tests {
 		let mut headers = Headers::new();
 		headers.set(AccessControlRequestMethod(Method::Get));
 		headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
-		let mut res = client
+		let res = client
 				.request(Method::Options, &format!("http://127.0.0.1:{}/a", server.port))
 				.headers(headers)
 				.send().unwrap();
