@@ -254,4 +254,37 @@ mod tests {
         let max_age = res.headers.get::<AccessControlMaxAge>().unwrap();
         assert_eq!(max_age.0, 60*60u32);
 	}
+
+    #[test]
+    fn normal_request_allows_origin() {
+		let server = AutoServer::new();
+		let client = Client::new();
+		let mut headers = Headers::new();
+		headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
+		let res = client
+            .get(&format!("http://127.0.0.1:{}/a", server.port))
+            .headers(headers)
+            .send().unwrap();
+		assert_eq!(res.status, status::ImATeapot);
+        let allow_origin = res.headers.get::<AccessControlAllowOrigin>().unwrap();
+        assert_eq!(format!("{}", allow_origin) , "http://www.a.com:8080");
+        assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
+        assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
+        assert!(res.headers.get::<AccessControlMaxAge>().is_none());
+	}
+    
+    #[test]
+    fn normal_request_without_origin_is_passthrough() {
+		let server = AutoServer::new();
+		let client = Client::new();
+		let res = client
+            .get(&format!("http://127.0.0.1:{}/a", server.port))
+            .send().unwrap();
+		assert_eq!(res.status, status::ImATeapot);
+        assert!(res.headers.get::<AccessControlAllowOrigin>().is_none());
+        assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
+        assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
+        assert!(res.headers.get::<AccessControlMaxAge>().is_none());
+	}
+
 }
