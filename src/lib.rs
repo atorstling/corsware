@@ -13,18 +13,61 @@ use iron::headers::{Origin,
                     AccessControlAllowMethods};
 use iron::middleware::{AroundMiddleware, Handler};
 
-pub struct CorsMiddleware;
-impl AroundMiddleware for CorsMiddleware {
+pub enum AllowedOrigins {
+    Any,
+    Specific(std::collections::HashSet<unicase::UniCase<String>>)
+}
 
-    fn around(self, handler: Box<Handler>) -> Box<Handler> {
-        Box::new(move | req: &mut Request | {
+impl AllowedOrigins {
+    fn answer_to(&self, origin: String) -> Option<String> {
+       match self {
+          &AllowedOrigins::Any => { Some("*".to_owned()) }
+          &AllowedOrigins::Specific(ref allowed) => {
+            if allowed.contains(&UniCase(origin.clone())) {
+                Some(origin)
+            } else {
+                None
+            }
+          }
+       }
+    }
+}
+
+
+pub struct CorsMiddleware {
+     pub allowed_origins: AllowedOrigins,
+     pub allowed_methods: Vec<Method>,
+     pub allowed_headers: Vec<UniCase<String>>,
+     pub exposed_headers: Vec<String>,
+     pub allow_credentials: bool,
+     pub max_age_seconds: u32
+}
+
+impl CorsMiddleware {
+    pub fn new() -> CorsMiddleware {
+            let allowed_methods: Vec<Method> = vec![ Method::Get, Method::Put, Method::Post ];
             let allowed_headers: Vec<unicase::UniCase<String>> = vec![
                     // To allow application/json
                     UniCase("Content-Type".to_owned()),
                     // Set by some js libs 
                     UniCase("X-Requested-With".to_owned()),
                     ];
-            let allowed_methods: Vec<Method> = vec![ Method::Get, Method::Put, Method::Post ];
+            let exposed_headers: Vec<String> = Vec::new();
+            CorsMiddleware {
+                allowed_origins: AllowedOrigins::Any,
+                allowed_methods: allowed_methods,
+                allowed_headers: allowed_headers,
+                exposed_headers: exposed_headers,
+                allow_credentials: false,
+                max_age_seconds: 60*60
+            }
+    }
+}
+
+impl AroundMiddleware for CorsMiddleware {
+
+    fn around(self, handler: Box<Handler>) -> Box<Handler> {
+        Box::new(move | req: &mut Request | {
             if req.method == Method::Options && 
                 req.headers.get::<AccessControlRequestMethod>().is_some() {
                 // Preflight request
@@ -37,11 +80,19 @@ impl AroundMiddleware for CorsMiddleware {
                     return Ok(resp);
                 }
                 let origin = maybe_origin.unwrap();
+                // Preflight is NoContent
                 let mut res = Response::with((status::NoContent));
+                let origin_string = origin.to_string();
+                let allowed_origin = self.allowed_origins.answer_to(origin_string);
                 //
                 // 2.If the value of the Origin header is not a case-sensitive match for any of the
                 // values in list of origins do not set any additional headers and terminate this
                 // set of steps.
+                if allowed_origin.is_none() {
+                    let resp = Response::with((status::BadRequest, 
+                                               "Preflight request with disallowed origin"));
+                    return Ok(resp);
+                }
                 //
                 // Note: Always matching is acceptable since the list of origins can be unbounded.
                 //
@@ -88,13 +139,13 @@ impl AroundMiddleware for CorsMiddleware {
                 //
                 // 8. Optionally add a single Access-Control-Max-Age header with as value the amount
                 // of seconds the user agent is allowed to cache the result of the request.
-                res.headers.set(AccessControlMaxAge(60*60));
+                res.headers.set(AccessControlMaxAge(self.max_age_seconds));
                 //
                 // 9. If method is a simple method this step may be skipped.
                 //
                 // Add one or more Access-Control-Allow-Methods headers consisting of (a subset of)
                 // the list of methods.
-                res.headers.set(AccessControlAllowMethods(allowed_methods));
+                res.headers.set(AccessControlAllowMethods(self.allowed_methods.clone()));
                 //
                 // If a method is a simple method it does not need to be listed, but this is not
                 // prohibited.
@@ -107,7 +158,7 @@ impl AroundMiddleware for CorsMiddleware {
                 //
                 // Add one or more Access-Control-Allow-Headers headers consisting of (a subset of)
                 // the list of headers.
-                res.headers.set(AccessControlAllowHeaders(allowed_headers));
+                res.headers.set(AccessControlAllowHeaders(self.allowed_headers.clone()));
                 //
                 // If a header field name is a simple header and is not Content-Type, it is not
                 // required to be listed. Content-Type is to be listed as only a subset of its
@@ -189,9 +240,11 @@ mod tests {
 		pub fn new() -> AutoServer {
 			let mut router = Router::new();
             let handler = |_: &mut Request| Ok(Response::with((status::ImATeapot, "")));
+            //let mut private_chain = Chain::new(handler);
+            //private_chain.link_around(CorsMiddleware);
 			router.get("/a", handler,  "get_a");
             let mut chain = Chain::new(router);
-            chain.link_around(CorsMiddleware);
+            chain.link_around(CorsMiddleware::new());
     		let l = Iron::new(chain).http(format!("localhost:0")).unwrap();
 			let p = l.socket.port();
 			AutoServer { listening: l, port: p }
