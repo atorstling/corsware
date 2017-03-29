@@ -62,14 +62,17 @@ impl CorsMiddleware {
                 max_age_seconds: 60*60
             }
     }
-}
 
-impl AroundMiddleware for CorsMiddleware {
-
-    fn around(self, handler: Box<Handler>) -> Box<Handler> {
-        Box::new(move | req: &mut Request | {
+    fn handle(&self, req: &mut Request, handler: &Box<Handler>) -> IronResult<Response> {
             if req.method == Method::Options && 
                 req.headers.get::<AccessControlRequestMethod>().is_some() {
+                self.handle_preflight(req) 
+                } else {
+                self.handle_normal(req, handler)
+            }
+    }
+
+    fn handle_preflight(&self, req: &mut Request) -> IronResult<Response> {
                 // Preflight request
                 // 1.If the Origin header is not present terminate this set of steps. The request is
                 // outside the scope of this specification.
@@ -167,7 +170,9 @@ impl AroundMiddleware for CorsMiddleware {
                 // Since the list of headers can be unbounded, simply returning supported headers
                 // from Access-Control-Allow-Headers can be enough.
                 Ok(res)
-            } else {
+    }
+
+    fn handle_normal(&self, req: &mut Request, handler: &Box<Handler>) -> IronResult<Response> {
                 // Normal request
                 // 1.If the Origin header is not present terminate this set of steps. The request is
                 // outside the scope of this specification.
@@ -205,7 +210,14 @@ impl AroundMiddleware for CorsMiddleware {
                     }
                     _ => result
                 }
-            }
+    }
+}
+
+impl AroundMiddleware for CorsMiddleware {
+
+    fn around(self, handler: Box<Handler>) -> Box<Handler> {
+        Box::new(move | req: &mut Request | {
+            self.handle(req, &handler)    
         })
     }
 }
