@@ -63,7 +63,7 @@ impl CorsMiddleware {
             }
     }
 
-    fn handle(&self, req: &mut Request, handler: &Box<Handler>) -> IronResult<Response> {
+    fn handle(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
             if req.method == Method::Options && 
                 req.headers.get::<AccessControlRequestMethod>().is_some() {
                 self.handle_preflight(req) 
@@ -172,7 +172,7 @@ impl CorsMiddleware {
                 Ok(res)
     }
 
-    fn handle_normal(&self, req: &mut Request, handler: &Box<Handler>) -> IronResult<Response> {
+    fn handle_normal(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
                 // Normal request
                 // 1.If the Origin header is not present terminate this set of steps. The request is
                 // outside the scope of this specification.
