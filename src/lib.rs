@@ -8,10 +8,14 @@ use iron::status;
 use iron::headers::{Origin, AccessControlRequestMethod, AccessControlAllowOrigin,
                     AccessControlAllowHeaders, AccessControlMaxAge, AccessControlAllowMethods};
 use iron::middleware::{AroundMiddleware, Handler};
+use std::collections::HashSet;
 
+// Using case-sensitive match of protocol://host:port
+// For a formal definition, see
+// https://tools.ietf.org/html/rfc6454#section-4
 pub enum AllowedOrigins {
     Any,
-    Specific(std::collections::HashSet<unicase::UniCase<String>>),
+    Specific(HashSet<String>),
 }
 
 impl AllowedOrigins {
@@ -19,7 +23,7 @@ impl AllowedOrigins {
         match self {
             &AllowedOrigins::Any => Some("*".to_owned()),
             &AllowedOrigins::Specific(ref allowed) => {
-                if allowed.contains(&UniCase(origin.clone())) {
+                if allowed.contains(&origin) {
                     Some(origin)
                 } else {
                     None
@@ -59,15 +63,17 @@ impl CorsMiddleware {
     }
 
     fn handle(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
+        // http://stackoverflow.com/questions/14015118/
+        // what-is-the-expected-response-to-an-invalid-cors-request
         if req.method == Method::Options &&
            req.headers.get::<AccessControlRequestMethod>().is_some() {
-            self.handle_preflight(req)
+            self.handle_preflight(req, handler)
         } else {
             self.handle_normal(req, handler)
         }
     }
 
-    fn handle_preflight(&self, req: &mut Request) -> IronResult<Response> {
+    fn handle_preflight(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
         // Preflight request
         // 1.If the Origin header is not present terminate this set of steps. The request is
         // outside the scope of this specification.
@@ -88,7 +94,7 @@ impl CorsMiddleware {
         // set of steps.
         if allowed_origin.is_none() {
             let resp = Response::with((status::BadRequest,
-                                       "Preflight request with disallowed origin"));
+                                       "Preflight request requesting disallowed origin"));
             return Ok(resp);
         }
         //
@@ -230,8 +236,10 @@ mod tests {
     use iron::headers::{Origin, AccessControlRequestMethod, AccessControlAllowOrigin,
                         AccessControlAllowHeaders, AccessControlMaxAge, AccessControlAllowMethods};
     use iron::method::Method;
-    use super::CorsMiddleware;
+    use iron::middleware::Handler;
+    use super::{CorsMiddleware, AllowedOrigins};
     use std::str::FromStr;
+    use std::collections::HashSet;
 
     struct AutoServer {
         listening: Listening,
@@ -240,14 +248,27 @@ mod tests {
 
     impl AutoServer {
         pub fn new() -> AutoServer {
+            AutoServer::with_cors(CorsMiddleware::new())
+        }
+
+        pub fn with_cors(cors: CorsMiddleware) -> AutoServer {
+            let get_handler = |_: &mut Request| Ok(Response::with((status::ImATeapot, "")));
+            let put_handler = |_: &mut Request| Ok(Response::with((status::BadRequest, "")));
+
             let mut router = Router::new();
-            let handler = |_: &mut Request| Ok(Response::with((status::ImATeapot, "")));
-            router.get("/", handler, "get_a");
+            router.get("", get_handler, "get_a");
+            router.put("", put_handler, "put_a");
+
             let mut chain = Chain::new(router);
-            chain.link_around(CorsMiddleware::new());
+            chain.link_around(cors);
             let mut mount = Mount::new();
+
             mount.mount("/a", chain);
-            let l = Iron::new(mount).http(format!("localhost:0")).unwrap();
+            AutoServer::with_handler(mount)
+        }
+
+        pub fn with_handler<H: Handler>(handler: H) -> AutoServer {
+            let l = Iron::new(handler).http(format!("localhost:0")).unwrap();
             let p = l.socket.port();
             AutoServer {
                 listening: l,
@@ -271,6 +292,12 @@ mod tests {
         assert_eq!(res.status, status::ImATeapot);
     }
 
+    fn to_string(res: &mut hyper::client::Response) -> String {
+        let mut s = String::new();
+        res.read_to_string(&mut s).unwrap();
+        s
+    }
+
     #[test]
     fn preflight_to_nonexistent_route_fails() {
         let server = AutoServer::new();
@@ -284,9 +311,7 @@ mod tests {
             .send()
             .unwrap();
         assert_eq!(res.status, status::NotFound);
-        let mut payload = String::new();
-        res.read_to_string(&mut payload).unwrap();
-        assert_eq!(payload, "");
+        assert_eq!(to_string(&mut res), "");
     }
 
     #[test]
@@ -307,8 +332,35 @@ mod tests {
     }
 
     #[test]
-    fn preflight_with_origin_accepts_same_origin() {
+    fn preflight_with_allowed_origin_sets_all_headers() {
         let server = AutoServer::new();
+        let client = Client::new();
+        let mut headers = Headers::new();
+        headers.set(AccessControlRequestMethod(Method::Get));
+        headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
+        let res = client.request(Method::Options,
+                                 &format!("http://127.0.0.1:{}/a", server.port))
+            .headers(headers)
+            .send()
+            .unwrap();
+        assert_eq!(res.status, status::NoContent);
+        let allow_origin = res.headers.get::<AccessControlAllowOrigin>().unwrap();
+        assert_eq!(format!("{}", allow_origin), "http://www.a.com:8080");
+        let allow_headers = res.headers.get::<AccessControlAllowHeaders>().unwrap();
+        assert_eq!(format!("{}", allow_headers),
+                   "Content-Type, X-Requested-With");
+        let allow_methods = res.headers.get::<AccessControlAllowMethods>().unwrap();
+        assert_eq!(format!("{}", allow_methods), "GET, PUT, POST");
+        let max_age = res.headers.get::<AccessControlMaxAge>().unwrap();
+        assert_eq!(max_age.0, 60 * 60u32);
+    }
+
+    #[test]
+    fn preflight_with_disallowed_origin_is_error() {
+        let mut cors = CorsMiddleware::new();
+        let origins: HashSet<String> = vec!["http://www.a.com".to_owned()].into_iter().collect();
+        cors.allowed_origins = AllowedOrigins::Specific(origins);
+        let server = AutoServer::with_cors(cors);
         let client = Client::new();
         let mut headers = Headers::new();
         headers.set(AccessControlRequestMethod(Method::Get));
