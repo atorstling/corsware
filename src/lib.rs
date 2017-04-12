@@ -105,10 +105,15 @@ impl CorsMiddleware {
         //
         // 3. Let method be the value as result of parsing the Access-Control-Request-Method
         // header.
+        let method = req.headers.get::<AccessControlRequestMethod>();
         //
         // If there is no Access-Control-Request-Method header or if parsing failed, do not
         // set any additional headers and terminate this set of steps. The request is
         // outside the scope of this specification.
+        if method.is_none() {
+            return Ok(Response::with((status::BadRequest,
+                                      "Preflight request without AccessControlRequestMethod")));
+        }
         //
         // 4. Let header field-names be the values as result of parsing the
         // Access-Control-Request-Headers headers.
@@ -373,6 +378,23 @@ mod tests {
             .unwrap();
         assert_eq!(res.status, status::BadRequest);
         assert_eq!(to_string(&mut res), "Preflight request requesting disallowed origin");
+    }
+
+    #[test]
+    fn preflight_without_method_is_bad_request() {
+        let server = AutoServer::new();
+        let client = Client::new();
+        let mut headers = Headers::new();
+        headers.set(Origin::from_str("http://a.com").unwrap());
+        let mut res = client.request(Method::Options,
+                                     &format!("http://127.0.0.1:{}/a", server.port))
+            .headers(headers)
+            .send()
+            .unwrap();
+        assert_eq!(res.status, status::BadRequest);
+        let mut payload = String::new();
+        res.read_to_string(&mut payload).unwrap();
+        assert_eq!(payload, "Preflight request without Origin header");
     }
 
     #[test]
