@@ -292,11 +292,11 @@ mod tests {
         assert_eq!(res.status, status::ImATeapot);
     }
 
-    fn to_string(res: &mut hyper::client::Response) -> String {
-        let mut s = String::new();
-        res.read_to_string(&mut s).unwrap();
-        s
-    }
+        fn to_string(res: &mut hyper::client::Response) -> String {
+            let mut s = String::new();
+            res.read_to_string(&mut s).unwrap();
+            s
+        }
 
     #[test]
     fn preflight_to_nonexistent_route_fails() {
@@ -358,28 +358,21 @@ mod tests {
     #[test]
     fn preflight_with_disallowed_origin_is_error() {
         let mut cors = CorsMiddleware::new();
-        let origins: HashSet<String> = vec!["http://www.a.com".to_owned()].into_iter().collect();
+        let origins: HashSet<String> = vec!["http://www.a.com".to_owned()]
+            .into_iter().collect();
         cors.allowed_origins = AllowedOrigins::Specific(origins);
         let server = AutoServer::with_cors(cors);
         let client = Client::new();
         let mut headers = Headers::new();
         headers.set(AccessControlRequestMethod(Method::Get));
         headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
-        let res = client.request(Method::Options,
+        let mut res = client.request(Method::Options,
                                  &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
             .unwrap();
-        assert_eq!(res.status, status::NoContent);
-        let allow_origin = res.headers.get::<AccessControlAllowOrigin>().unwrap();
-        assert_eq!(format!("{}", allow_origin), "http://www.a.com:8080");
-        let allow_headers = res.headers.get::<AccessControlAllowHeaders>().unwrap();
-        assert_eq!(format!("{}", allow_headers),
-                   "Content-Type, X-Requested-With");
-        let allow_methods = res.headers.get::<AccessControlAllowMethods>().unwrap();
-        assert_eq!(format!("{}", allow_methods), "GET, PUT, POST");
-        let max_age = res.headers.get::<AccessControlMaxAge>().unwrap();
-        assert_eq!(max_age.0, 60 * 60u32);
+        assert_eq!(res.status, status::BadRequest);
+        assert_eq!(to_string(&mut res), "Preflight request requesting disallowed origin");
     }
 
     #[test]
