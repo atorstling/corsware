@@ -65,6 +65,8 @@ impl CorsMiddleware {
     fn handle(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
         // http://stackoverflow.com/questions/14015118/
         // what-is-the-expected-response-to-an-invalid-cors-request
+        // http://stackoverflow.com/questions/32331737/
+        // how-can-i-identify-a-cors-preflight-request
         if req.method == Method::Options &&
            req.headers.get::<AccessControlRequestMethod>().is_some() {
             self.handle_preflight(req, handler)
@@ -74,9 +76,9 @@ impl CorsMiddleware {
     }
 
     fn handle_preflight(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
-        // Preflight request
-        // 1.If the Origin header is not present terminate this set of steps. The request is
-        // outside the scope of this specification.
+        // - Preflight request
+        // - 1.If the Origin header is not present terminate this set of steps. The request is
+        // - outside the scope of this specification.
         let maybe_origin = req.headers.get::<Origin>();
         if maybe_origin.is_none() {
             let resp = Response::with((status::BadRequest,
@@ -89,92 +91,93 @@ impl CorsMiddleware {
         let origin_string = origin.to_string();
         let allowed_origin = self.allowed_origins.answer_to(origin_string);
         //
-        // 2.If the value of the Origin header is not a case-sensitive match for any of the
-        // values in list of origins do not set any additional headers and terminate this
-        // set of steps.
+        // - 2.If the value of the Origin header is not a case-sensitive match for any of the
+        // - values in list of origins do not set any additional headers and terminate this
+        // - set of steps.
         if allowed_origin.is_none() {
             let resp = Response::with((status::BadRequest,
                                        "Preflight request requesting disallowed origin"));
             return Ok(resp);
         }
         //
-        // Note: Always matching is acceptable since the list of origins can be unbounded.
+        // - Note: Always matching is acceptable since the list of origins can be unbounded.
         //
-        // Note: The Origin header can only contain a single origin as the user agent
+        // - Note: The Origin header can only contain a single origin as the user agent
         //       will not follow redirects.
         //
-        // 3. Let method be the value as result of parsing the Access-Control-Request-Method
-        // header.
-        let method = req.headers.get::<AccessControlRequestMethod>();
+        // - 3. Let method be the value as result of parsing the Access-Control-Request-Method
+        // - header.
+        
+        // We can assume that this header exists, since we already checked that before
+        // classifying the request as preflight
+        let method = req.headers.get::<AccessControlRequestMethod>().unwrap();
         //
-        // If there is no Access-Control-Request-Method header or if parsing failed, do not
-        // set any additional headers and terminate this set of steps. The request is
-        // outside the scope of this specification.
-        if method.is_none() {
-            return Ok(Response::with((status::BadRequest,
-                                      "Preflight request without AccessControlRequestMethod")));
-        }
+        // - If there is no Access-Control-Request-Method header or if parsing failed, do not
+        // - set any additional headers and terminate this set of steps. The request is
+        // - outside the scope of this specification.
         //
-        // 4. Let header field-names be the values as result of parsing the
-        // Access-Control-Request-Headers headers.
+        // Not applicable to us as explained above
         //
-        // If there are no Access-Control-Request-Headers headers let header field-names be
-        // the empty list.
+        // - 4. Let header field-names be the values as result of parsing the
+        // - Access-Control-Request-Headers headers.
         //
-        // If parsing failed do not set any additional headers and terminate this set of
-        // steps. The request is outside the scope of this specification.
+        // - If there are no Access-Control-Request-Headers headers let header field-names be
+        // - the empty list.
         //
-        // 5.If method is not a case-sensitive match for any of the values in list of
-        //   methods do not set any additional headers and terminate this set of steps.
+        // - If parsing failed do not set any additional headers and terminate this set of
+        // - steps. The request is outside the scope of this specification.
         //
-        // Always matching is acceptable since the list of methods can be unbounded.
+        // - 5.If method is not a case-sensitive match for any of the values in list of
+        // -   methods do not set any additional headers and terminate this set of steps.
         //
-        // 6. If any of the header field-names is not a ASCII case-insensitive match for any
-        // of the values in list of headers do not set any additional headers and terminate
-        // this set of steps.
+        // - Always matching is acceptable since the list of methods can be unbounded.
         //
-        // Always matching is acceptable since the list of headers can be unbounded.
+        // - 6. If any of the header field-names is not a ASCII case-insensitive match for any
+        // - of the values in list of headers do not set any additional headers and terminate
+        // - this set of steps.
         //
-        // 7. If the resource supports credentials add a single Access-Control-Allow-Origin
-        // header, with the value of the Origin header as value, and add a single
-        // Access-Control-Allow-Credentials header with the case-sensitive string "true" as
-        // value.
+        // - Always matching is acceptable since the list of headers can be unbounded.
         //
-        // Otherwise, add a single Access-Control-Allow-Origin header, with either the
-        // value of the Origin header or the string "*" as value.
+        // - 7. If the resource supports credentials add a single Access-Control-Allow-Origin
+        // - header, with the value of the Origin header as value, and add a single
+        // - Access-Control-Allow-Credentials header with the case-sensitive string "true" as
+        // - value.
+        //
+        // - Otherwise, add a single Access-Control-Allow-Origin header, with either the
+        // - value of the Origin header or the string "*" as value.
         res.headers.set(AccessControlAllowOrigin::Value(format!("{}", origin)));
         //
-        // The string "*" cannot be used for a resource that supports credentials.
+        // - The string "*" cannot be used for a resource that supports credentials.
         //
-        // 8. Optionally add a single Access-Control-Max-Age header with as value the amount
-        // of seconds the user agent is allowed to cache the result of the request.
+        // - 8. Optionally add a single Access-Control-Max-Age header with as value the amount
+        // - of seconds the user agent is allowed to cache the result of the request.
         res.headers.set(AccessControlMaxAge(self.max_age_seconds));
         //
-        // 9. If method is a simple method this step may be skipped.
+        // - 9. If method is a simple method this step may be skipped.
         //
-        // Add one or more Access-Control-Allow-Methods headers consisting of (a subset of)
-        // the list of methods.
+        // - Add one or more Access-Control-Allow-Methods headers consisting of (a subset of)
+        // - the list of methods.
         res.headers.set(AccessControlAllowMethods(self.allowed_methods.clone()));
         //
-        // If a method is a simple method it does not need to be listed, but this is not
-        // prohibited.
+        // - If a method is a simple method it does not need to be listed, but this is not
+        // - prohibited.
         //
-        // Since the list of methods can be unbounded, simply returning the method
-        // indicated by Access-Control-Request-Method (if supported) can be enough.
+        // - Since the list of methods can be unbounded, simply returning the method
+        // - indicated by Access-Control-Request-Method (if supported) can be enough.
         //
-        // 10.If each of the header field-names is a simple header and none is Content-Type,
-        // this step may be skipped.
+        // - 10.If each of the header field-names is a simple header and none is Content-Type,
+        // - this step may be skipped.
         //
-        // Add one or more Access-Control-Allow-Headers headers consisting of (a subset of)
-        // the list of headers.
+        // - Add one or more Access-Control-Allow-Headers headers consisting of (a subset of)
+        // - the list of headers.
         res.headers.set(AccessControlAllowHeaders(self.allowed_headers.clone()));
         //
-        // If a header field name is a simple header and is not Content-Type, it is not
-        // required to be listed. Content-Type is to be listed as only a subset of its
-        // values makes it qualify as simple header.
+        // - If a header field name is a simple header and is not Content-Type, it is not
+        // - required to be listed. Content-Type is to be listed as only a subset of its
+        // - values makes it qualify as simple header.
         //
-        // Since the list of headers can be unbounded, simply returning supported headers
-        // from Access-Control-Allow-Headers can be enough.
+        // - Since the list of headers can be unbounded, simply returning supported headers
+        // - from Access-Control-Allow-Headers can be enough.
         Ok(res)
     }
 
@@ -381,7 +384,9 @@ mod tests {
     }
 
     #[test]
-    fn preflight_without_method_is_bad_request() {
+    fn options_without_method_is_normal_request() {
+        // A requestion with options and origin but without
+        // method is considers non-preflight
         let server = AutoServer::new();
         let client = Client::new();
         let mut headers = Headers::new();
@@ -391,10 +396,10 @@ mod tests {
             .headers(headers)
             .send()
             .unwrap();
-        assert_eq!(res.status, status::BadRequest);
+        assert_eq!(res.status, status::Ok);
         let mut payload = String::new();
         res.read_to_string(&mut payload).unwrap();
-        assert_eq!(payload, "Preflight request without Origin header");
+        assert_eq!(payload, "");
     }
 
     #[test]
