@@ -5,8 +5,13 @@ use unicase::UniCase;
 use iron::prelude::*;
 use iron::method::Method;
 use iron::status;
-use iron::headers::{Origin, AccessControlRequestMethod, AccessControlAllowOrigin,
-                    AccessControlAllowHeaders, AccessControlMaxAge, AccessControlAllowMethods};
+use iron::headers::{Origin, 
+                    AccessControlRequestMethod, 
+                    AccessControlRequestHeaders, 
+                    AccessControlAllowOrigin,
+                    AccessControlAllowHeaders, 
+                    AccessControlMaxAge, 
+                    AccessControlAllowMethods};
 use iron::middleware::{AroundMiddleware, Handler};
 use std::collections::HashSet;
 
@@ -76,6 +81,9 @@ impl CorsMiddleware {
     }
 
     fn handle_preflight(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
+        // Successful preflight status code is NoContent
+        let mut res = Response::with((status::NoContent));
+        
         // - Preflight request
         // - 1.If the Origin header is not present terminate this set of steps. The request is
         // - outside the scope of this specification.
@@ -86,40 +94,38 @@ impl CorsMiddleware {
             return Ok(resp);
         }
         let origin = maybe_origin.unwrap();
-        // Preflight is NoContent
-        let mut res = Response::with((status::NoContent));
-        let origin_string = origin.to_string();
-        let allowed_origin = self.allowed_origins.answer_to(origin_string);
         //
         // - 2.If the value of the Origin header is not a case-sensitive match for any of the
         // - values in list of origins do not set any additional headers and terminate this
         // - set of steps.
-        if allowed_origin.is_none() {
-            let resp = Response::with((status::BadRequest,
-                                       "Preflight request requesting disallowed origin"));
-            return Ok(resp);
-        }
         //
         // - Note: Always matching is acceptable since the list of origins can be unbounded.
         //
         // - Note: The Origin header can only contain a single origin as the user agent
         //       will not follow redirects.
         //
+        let allowed_origin = self.allowed_origins.answer_to(origin.to_string());
+        if allowed_origin.is_none() {
+            let resp = Response::with((status::BadRequest,
+                                       "Preflight request requesting disallowed origin"));
+            return Ok(resp);
+        }
+        //
         // - 3. Let method be the value as result of parsing the Access-Control-Request-Method
         // - header.
-        
-        // We can assume that this header exists, since we already checked that before
-        // classifying the request as preflight
-        let method = req.headers.get::<AccessControlRequestMethod>().unwrap();
         //
         // - If there is no Access-Control-Request-Method header or if parsing failed, do not
         // - set any additional headers and terminate this set of steps. The request is
         // - outside the scope of this specification.
-        //
-        // Not applicable to us as explained above
+        
+        // We can assume that this header exists, since we already checked that before
+        // classifying the request as preflight
+        let requested_method = req.headers.get::<AccessControlRequestMethod>().unwrap();
+        
         //
         // - 4. Let header field-names be the values as result of parsing the
         // - Access-Control-Request-Headers headers.
+        let maybe_requested_headers = req.headers.get::<AccessControlRequestHeaders>();
         //
         // - If there are no Access-Control-Request-Headers headers let header field-names be
         // - the empty list.
@@ -129,6 +135,11 @@ impl CorsMiddleware {
         //
         // - 5.If method is not a case-sensitive match for any of the values in list of
         // -   methods do not set any additional headers and terminate this set of steps.
+        //
+        if !self.allowed_methods.contains(requested_method) {
+            return Ok(Response::with((status::BadRequest,
+                                       "Preflight request requesting disallowed method")));
+        }
         //
         // - Always matching is acceptable since the list of methods can be unbounded.
         //
@@ -400,6 +411,26 @@ mod tests {
         let mut payload = String::new();
         res.read_to_string(&mut payload).unwrap();
         assert_eq!(payload, "");
+    }
+
+    #[test]
+    fn preflight_with_disallowed_method_is_error() {
+        // A requestion with options and origin but without
+        // method is considers non-preflight
+        let server = AutoServer::new();
+        let client = Client::new();
+        let mut headers = Headers::new();
+        headers.set(AccessControlRequestMethod(Method::Patch));
+        headers.set(Origin::from_str("http://a.com").unwrap());
+        let mut res = client.request(Method::Options,
+                                     &format!("http://127.0.0.1:{}/a", server.port))
+            .headers(headers)
+            .send()
+            .unwrap();
+        assert_eq!(res.status, status::BadRequest);
+        let mut payload = String::new();
+        res.read_to_string(&mut payload).unwrap();
+        assert_eq!(payload, "Preflight request requesting disallowed method");
     }
 
     #[test]
