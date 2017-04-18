@@ -42,6 +42,9 @@ impl AllowedOrigins {
 
 pub struct CorsMiddleware {
     pub allowed_origins: AllowedOrigins,
+	// Having allowed methods "any" would not make much sense
+    // since we need to enumerate all methods when returning
+    // the allowed-methods header
     pub allowed_methods: Vec<Method>,
     pub allowed_headers: Vec<UniCase<String>>,
     pub exposed_headers: Vec<String>,
@@ -51,7 +54,17 @@ pub struct CorsMiddleware {
 
 impl CorsMiddleware {
     pub fn new() -> CorsMiddleware {
-        let allowed_methods: Vec<Method> = vec![Get, Put, Post];
+        let allowed_methods: Vec<Method> = vec![
+Options,
+    Get,
+    Post,
+    Put,
+    Delete,
+    Head,
+    Trace,
+    Connect,
+    Patch
+            ];
         let allowed_headers: Vec<unicase::UniCase<String>> =
             vec![// To allow application/json
                  UniCase("Content-Type".to_owned()),
@@ -370,7 +383,7 @@ mod tests {
         assert_eq!(format!("{}", allow_headers),
                    "Content-Type, X-Requested-With");
         let allow_methods = res.headers.get::<AccessControlAllowMethods>().unwrap();
-        assert_eq!(format!("{}", allow_methods), "GET, PUT, POST");
+        assert_eq!(format!("{}", allow_methods), "OPTIONS, GET, POST, PUT, DELETE, HEAD, TRACE, CONNECT, PATCH");
         let max_age = res.headers.get::<AccessControlMaxAge>().unwrap();
         assert_eq!(max_age.0, 60 * 60u32);
     }
@@ -418,7 +431,9 @@ mod tests {
     fn preflight_with_disallowed_method_is_error() {
         // A requestion with options and origin but without
         // method is considers non-preflight
-        let server = AutoServer::new();
+		let cm = CorsMiddleware::new();
+		let cm2 = CorsMiddleware { allowed_methods: vec![], ..cm };
+        let server = AutoServer::with_cors(cm2);
         let client = Client::new();
         let mut headers = Headers::new();
         headers.set(AccessControlRequestMethod(Patch));
