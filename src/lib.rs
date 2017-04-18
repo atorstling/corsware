@@ -4,6 +4,7 @@ extern crate unicase;
 use unicase::UniCase;
 use iron::prelude::*;
 use iron::method::Method;
+use iron::method::Method::*;
 use iron::status;
 use iron::headers::{Origin, 
                     AccessControlRequestMethod, 
@@ -50,7 +51,7 @@ pub struct CorsMiddleware {
 
 impl CorsMiddleware {
     pub fn new() -> CorsMiddleware {
-        let allowed_methods: Vec<Method> = vec![Method::Get, Method::Put, Method::Post];
+        let allowed_methods: Vec<Method> = vec![Get, Put, Post];
         let allowed_headers: Vec<unicase::UniCase<String>> =
             vec![// To allow application/json
                  UniCase("Content-Type".to_owned()),
@@ -72,7 +73,7 @@ impl CorsMiddleware {
         // what-is-the-expected-response-to-an-invalid-cors-request
         // http://stackoverflow.com/questions/32331737/
         // how-can-i-identify-a-cors-preflight-request
-        if req.method == Method::Options &&
+        if req.method == Options &&
            req.headers.get::<AccessControlRequestMethod>().is_some() {
             self.handle_preflight(req, handler)
         } else {
@@ -80,7 +81,7 @@ impl CorsMiddleware {
         }
     }
 
-    fn handle_preflight(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
+    fn handle_preflight(&self, req: &mut Request, _: &Handler) -> IronResult<Response> {
         // Successful preflight status code is NoContent
         let mut res = Response::with((status::NoContent));
         
@@ -125,7 +126,7 @@ impl CorsMiddleware {
         //
         // - 4. Let header field-names be the values as result of parsing the
         // - Access-Control-Request-Headers headers.
-        let maybe_requested_headers = req.headers.get::<AccessControlRequestHeaders>();
+        let _maybe_requested_headers = req.headers.get::<AccessControlRequestHeaders>();
         //
         // - If there are no Access-Control-Request-Headers headers let header field-names be
         // - the empty list.
@@ -254,7 +255,7 @@ mod tests {
     use std::io::Read;
     use iron::headers::{Origin, AccessControlRequestMethod, AccessControlAllowOrigin,
                         AccessControlAllowHeaders, AccessControlMaxAge, AccessControlAllowMethods};
-    use iron::method::Method;
+    use iron::method::Method::*;
     use iron::middleware::Handler;
     use super::{CorsMiddleware, AllowedOrigins};
     use std::str::FromStr;
@@ -322,9 +323,9 @@ mod tests {
         let server = AutoServer::new();
         let client = Client::new();
         let mut headers = Headers::new();
-        headers.set(AccessControlRequestMethod(Method::Get));
+        headers.set(AccessControlRequestMethod(Get));
         headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
-        let mut res = client.request(Method::Options,
+        let mut res = client.request(Options,
                                      &format!("http://127.0.0.1:{}/b", server.port))
             .headers(headers)
             .send()
@@ -338,8 +339,8 @@ mod tests {
         let server = AutoServer::new();
         let client = Client::new();
         let mut headers = Headers::new();
-        headers.set(AccessControlRequestMethod(Method::Get));
-        let mut res = client.request(Method::Options,
+        headers.set(AccessControlRequestMethod(Get));
+        let mut res = client.request(Options,
                                      &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
@@ -355,9 +356,9 @@ mod tests {
         let server = AutoServer::new();
         let client = Client::new();
         let mut headers = Headers::new();
-        headers.set(AccessControlRequestMethod(Method::Get));
+        headers.set(AccessControlRequestMethod(Get));
         headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
-        let res = client.request(Method::Options,
+        let res = client.request(Options,
                                  &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
@@ -383,9 +384,9 @@ mod tests {
         let server = AutoServer::with_cors(cors);
         let client = Client::new();
         let mut headers = Headers::new();
-        headers.set(AccessControlRequestMethod(Method::Get));
+        headers.set(AccessControlRequestMethod(Get));
         headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
-        let mut res = client.request(Method::Options,
+        let mut res = client.request(Options,
                                  &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
@@ -402,7 +403,7 @@ mod tests {
         let client = Client::new();
         let mut headers = Headers::new();
         headers.set(Origin::from_str("http://a.com").unwrap());
-        let mut res = client.request(Method::Options,
+        let mut res = client.request(Options,
                                      &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
@@ -420,9 +421,9 @@ mod tests {
         let server = AutoServer::new();
         let client = Client::new();
         let mut headers = Headers::new();
-        headers.set(AccessControlRequestMethod(Method::Patch));
+        headers.set(AccessControlRequestMethod(Patch));
         headers.set(Origin::from_str("http://a.com").unwrap());
-        let mut res = client.request(Method::Options,
+        let mut res = client.request(Options,
                                      &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
