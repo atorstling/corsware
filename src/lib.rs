@@ -15,6 +15,7 @@ use iron::headers::{Origin,
                     AccessControlAllowMethods};
 use iron::middleware::{AroundMiddleware, Handler};
 use std::collections::HashSet;
+use std::iter::FromIterator;
 
 // Using case-sensitive match of protocol://host:port
 // For a formal definition, see
@@ -139,7 +140,11 @@ Options,
         //
         // - 4. Let header field-names be the values as result of parsing the
         // - Access-Control-Request-Headers headers.
-        let _maybe_requested_headers = req.headers.get::<AccessControlRequestHeaders>();
+		let empty_vec: Vec<UniCase<String>> = vec![];
+        let maybe_requested_headers = req.headers.get::<AccessControlRequestHeaders>();
+		let requested_headers: &Vec<UniCase<String>> = if maybe_requested_headers.is_some() {
+&maybe_requested_headers.unwrap().0
+} else { &empty_vec };
         //
         // - If there are no Access-Control-Request-Headers headers let header field-names be
         // - the empty list.
@@ -152,7 +157,7 @@ Options,
         //
         if !self.allowed_methods.contains(requested_method) {
             return Ok(Response::with((status::BadRequest,
-                                       "Preflight request requesting disallowed method")));
+                                   format!("Preflight request requesting disallowed method {}", requested_method))));
         }
         //
         // - Always matching is acceptable since the list of methods can be unbounded.
@@ -160,6 +165,15 @@ Options,
         // - 6. If any of the header field-names is not a ASCII case-insensitive match for any
         // - of the values in list of headers do not set any additional headers and terminate
         // - this set of steps.
+		let requested_headers_set: HashSet<UniCase<String>> = HashSet::from_iter(requested_headers.iter().cloned());
+		let allowed_headers_set: HashSet<UniCase<String>> = HashSet::from_iter(self.allowed_headers.iter().cloned());
+		let disallowed_headers:HashSet<UniCase<String>> = requested_headers_set.difference(&allowed_headers_set).cloned().collect();
+		if !disallowed_headers.is_empty() {
+			let a = disallowed_headers.iter().map(|uh| { uh.to_string() }).collect::<Vec<_>>().join(",");
+			let msg = format!("Preflight request requesting disallowed header(s) {}", a) ;
+			return Ok(Response::with((status::BadRequest, msg)));
+				
+		}
         //
         // - Always matching is acceptable since the list of headers can be unbounded.
         //
@@ -371,11 +385,14 @@ mod tests {
         let mut headers = Headers::new();
         headers.set(AccessControlRequestMethod(Get));
         headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
-        let res = client.request(Options,
+        let mut res = client.request(Options,
                                  &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
             .unwrap();
+        let mut payload = String::new();
+        res.read_to_string(&mut payload).unwrap();
+		assert_eq!(payload, "");
         assert_eq!(res.status, status::NoContent);
         let allow_origin = res.headers.get::<AccessControlAllowOrigin>().unwrap();
         assert_eq!(format!("{}", allow_origin), "http://www.a.com:8080");
@@ -446,7 +463,7 @@ mod tests {
         assert_eq!(res.status, status::BadRequest);
         let mut payload = String::new();
         res.read_to_string(&mut payload).unwrap();
-        assert_eq!(payload, "Preflight request requesting disallowed method");
+        assert_eq!(payload, "Preflight request requesting disallowed method PATCH");
     }
 
     #[test]
