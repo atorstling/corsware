@@ -26,12 +26,12 @@ pub enum AllowedOrigins {
 }
 
 impl AllowedOrigins {
-    fn answer_to(&self, origin: String) -> Option<String> {
+    fn allowed_for(&self, origin: &String) -> Option<String> {
         match self {
             &AllowedOrigins::Any => Some("*".to_owned()),
             &AllowedOrigins::Specific(ref allowed) => {
-                if allowed.contains(&origin) {
-                    Some(origin)
+                if allowed.contains(origin) {
+                    Some(origin.clone())
                 } else {
                     None
                 }
@@ -119,10 +119,11 @@ Options,
         // - Note: The Origin header can only contain a single origin as the user agent
         //       will not follow redirects.
         //
-        let allowed_origin = self.allowed_origins.answer_to(origin.to_string());
+		let origin_str = origin.to_string();
+        let allowed_origin = self.allowed_origins.allowed_for(&origin_str);
         if allowed_origin.is_none() {
             let resp = Response::with((status::BadRequest,
-                                       "Preflight request requesting disallowed origin"));
+                           format!("Preflight request requesting disallowed origin '{}'", origin_str)));
             return Ok(resp);
         }
         //
@@ -280,13 +281,17 @@ mod tests {
     use self::hyper::Client;
     use self::hyper::header::Headers;
     use std::io::Read;
-    use iron::headers::{Origin, AccessControlRequestMethod, AccessControlAllowOrigin,
+    use iron::headers::{Origin, 
+						AccessControlRequestMethod, 
+						AccessControlRequestHeaders, 
+						AccessControlAllowOrigin,
                         AccessControlAllowHeaders, AccessControlMaxAge, AccessControlAllowMethods};
     use iron::method::Method::*;
     use iron::middleware::Handler;
     use super::{CorsMiddleware, AllowedOrigins};
     use std::str::FromStr;
     use std::collections::HashSet;
+	use unicase::UniCase;
 
     struct AutoServer {
         listening: Listening,
@@ -422,7 +427,27 @@ mod tests {
             .send()
             .unwrap();
         assert_eq!(res.status, status::BadRequest);
-        assert_eq!(to_string(&mut res), "Preflight request requesting disallowed origin");
+        assert_eq!(to_string(&mut res), "Preflight request requesting disallowed origin 'http://www.a.com:8080'");
+    }
+
+    #[test]
+    fn preflight_with_disallowed_header_is_error() {
+        let mut cors = CorsMiddleware::new();
+        cors.allowed_headers = vec![];
+        let server = AutoServer::with_cors(cors);
+        let client = Client::new();
+        let mut headers = Headers::new();
+        headers.set(AccessControlRequestMethod(Get));
+		let head_vec=vec![UniCase("DoesNotExist".to_owned())];
+        headers.set(AccessControlRequestHeaders(head_vec));
+        headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
+        let mut res = client.request(Options,
+                                 &format!("http://127.0.0.1:{}/a", server.port))
+            .headers(headers)
+            .send()
+            .unwrap();
+        assert_eq!(res.status, status::BadRequest);
+        assert_eq!(to_string(&mut res), "Preflight request requesting disallowed header(s) DoesNotExist");
     }
 
     #[test]
