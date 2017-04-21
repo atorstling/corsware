@@ -6,12 +6,8 @@ use iron::prelude::*;
 use iron::method::Method;
 use iron::method::Method::*;
 use iron::status;
-use iron::headers::{Origin, 
-                    AccessControlRequestMethod, 
-                    AccessControlRequestHeaders, 
-                    AccessControlAllowOrigin,
-                    AccessControlAllowHeaders, 
-                    AccessControlMaxAge, 
+use iron::headers::{Origin, AccessControlRequestMethod, AccessControlRequestHeaders,
+                    AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlMaxAge,
                     AccessControlAllowMethods};
 use iron::middleware::{AroundMiddleware, Handler};
 use std::collections::HashSet;
@@ -43,7 +39,7 @@ impl AllowedOrigins {
 
 pub struct CorsMiddleware {
     pub allowed_origins: AllowedOrigins,
-	// Having allowed methods "any" would not make much sense
+    // Having allowed methods "any" would not make much sense
     // since we need to enumerate all methods when returning
     // the allowed-methods header
     pub allowed_methods: Vec<Method>,
@@ -55,17 +51,8 @@ pub struct CorsMiddleware {
 
 impl CorsMiddleware {
     pub fn new() -> CorsMiddleware {
-        let allowed_methods: Vec<Method> = vec![
-Options,
-    Get,
-    Post,
-    Put,
-    Delete,
-    Head,
-    Trace,
-    Connect,
-    Patch
-            ];
+        let allowed_methods: Vec<Method> = vec![Options, Get, Post, Put, Delete, Head, Trace,
+                                                Connect, Patch];
         let allowed_headers: Vec<unicase::UniCase<String>> =
             vec![// To allow application/json
                  UniCase("Content-Type".to_owned()),
@@ -87,8 +74,7 @@ Options,
         // what-is-the-expected-response-to-an-invalid-cors-request
         // http://stackoverflow.com/questions/32331737/
         // how-can-i-identify-a-cors-preflight-request
-        if req.method == Options &&
-           req.headers.get::<AccessControlRequestMethod>().is_some() {
+        if req.method == Options && req.headers.get::<AccessControlRequestMethod>().is_some() {
             self.handle_preflight(req, handler)
         } else {
             self.handle_normal(req, handler)
@@ -98,7 +84,7 @@ Options,
     fn handle_preflight(&self, req: &mut Request, _: &Handler) -> IronResult<Response> {
         // Successful preflight status code is NoContent
         let mut res = Response::with((status::NoContent));
-        
+
         // - Preflight request
         // - 1.If the Origin header is not present terminate this set of steps. The request is
         // - outside the scope of this specification.
@@ -119,11 +105,13 @@ Options,
         // - Note: The Origin header can only contain a single origin as the user agent
         //       will not follow redirects.
         //
-		let origin_str = origin.to_string();
+        let origin_str = origin.to_string();
         let allowed_origin = self.allowed_origins.allowed_for(&origin_str);
         if allowed_origin.is_none() {
             let resp = Response::with((status::BadRequest,
-                           format!("Preflight request requesting disallowed origin '{}'", origin_str)));
+                                       format!("Preflight request requesting \
+                                       disallowed origin '{}'",
+                                               origin_str)));
             return Ok(resp);
         }
         //
@@ -133,19 +121,21 @@ Options,
         // - If there is no Access-Control-Request-Method header or if parsing failed, do not
         // - set any additional headers and terminate this set of steps. The request is
         // - outside the scope of this specification.
-        
+
         // We can assume that this header exists, since we already checked that before
         // classifying the request as preflight
         let requested_method = req.headers.get::<AccessControlRequestMethod>().unwrap();
-        
+
         //
         // - 4. Let header field-names be the values as result of parsing the
         // - Access-Control-Request-Headers headers.
-		let empty_vec: Vec<UniCase<String>> = vec![];
+        let empty_vec: Vec<UniCase<String>> = vec![];
         let maybe_requested_headers = req.headers.get::<AccessControlRequestHeaders>();
-		let requested_headers: &Vec<UniCase<String>> = if maybe_requested_headers.is_some() {
-&maybe_requested_headers.unwrap().0
-} else { &empty_vec };
+        let requested_headers: &Vec<UniCase<String>> = if maybe_requested_headers.is_some() {
+            &maybe_requested_headers.unwrap().0
+        } else {
+            &empty_vec
+        };
         //
         // - If there are no Access-Control-Request-Headers headers let header field-names be
         // - the empty list.
@@ -158,7 +148,8 @@ Options,
         //
         if !self.allowed_methods.contains(requested_method) {
             return Ok(Response::with((status::BadRequest,
-                                   format!("Preflight request requesting disallowed method {}", requested_method))));
+                                      format!("Preflight request requesting disallowed method {}",
+                                              requested_method))));
         }
         //
         // - Always matching is acceptable since the list of methods can be unbounded.
@@ -166,15 +157,21 @@ Options,
         // - 6. If any of the header field-names is not a ASCII case-insensitive match for any
         // - of the values in list of headers do not set any additional headers and terminate
         // - this set of steps.
-		let requested_headers_set: HashSet<UniCase<String>> = HashSet::from_iter(requested_headers.iter().cloned());
-		let allowed_headers_set: HashSet<UniCase<String>> = HashSet::from_iter(self.allowed_headers.iter().cloned());
-		let disallowed_headers:HashSet<UniCase<String>> = requested_headers_set.difference(&allowed_headers_set).cloned().collect();
-		if !disallowed_headers.is_empty() {
-			let a = disallowed_headers.iter().map(|uh| { uh.to_string() }).collect::<Vec<_>>().join(",");
-			let msg = format!("Preflight request requesting disallowed header(s) {}", a) ;
-			return Ok(Response::with((status::BadRequest, msg)));
-				
-		}
+        let requested_headers_set: HashSet<UniCase<String>> =
+            HashSet::from_iter(requested_headers.iter().cloned());
+        let allowed_headers_set: HashSet<UniCase<String>> =
+            HashSet::from_iter(self.allowed_headers.iter().cloned());
+        let disallowed_headers: HashSet<UniCase<String>> =
+            requested_headers_set.difference(&allowed_headers_set).cloned().collect();
+        if !disallowed_headers.is_empty() {
+            let a = disallowed_headers.iter()
+                .map(|uh| uh.to_string())
+                .collect::<Vec<_>>()
+                .join(",");
+            let msg = format!("Preflight request requesting disallowed header(s) {}", a);
+            return Ok(Response::with((status::BadRequest, msg)));
+
+        }
         //
         // - Always matching is acceptable since the list of headers can be unbounded.
         //
@@ -281,17 +278,15 @@ mod tests {
     use self::hyper::Client;
     use self::hyper::header::Headers;
     use std::io::Read;
-    use iron::headers::{Origin, 
-						AccessControlRequestMethod, 
-						AccessControlRequestHeaders, 
-						AccessControlAllowOrigin,
-                        AccessControlAllowHeaders, AccessControlMaxAge, AccessControlAllowMethods};
+    use iron::headers::{Origin, AccessControlRequestMethod, AccessControlRequestHeaders,
+                        AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlMaxAge,
+                        AccessControlAllowMethods};
     use iron::method::Method::*;
     use iron::middleware::Handler;
     use super::{CorsMiddleware, AllowedOrigins};
     use std::str::FromStr;
     use std::collections::HashSet;
-	use unicase::UniCase;
+    use unicase::UniCase;
 
     struct AutoServer {
         listening: Listening,
@@ -344,11 +339,11 @@ mod tests {
         assert_eq!(res.status, status::ImATeapot);
     }
 
-        fn to_string(res: &mut hyper::client::Response) -> String {
-            let mut s = String::new();
-            res.read_to_string(&mut s).unwrap();
-            s
-        }
+    fn to_string(res: &mut hyper::client::Response) -> String {
+        let mut s = String::new();
+        res.read_to_string(&mut s).unwrap();
+        s
+    }
 
     #[test]
     fn preflight_to_nonexistent_route_fails() {
@@ -357,8 +352,7 @@ mod tests {
         let mut headers = Headers::new();
         headers.set(AccessControlRequestMethod(Get));
         headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
-        let mut res = client.request(Options,
-                                     &format!("http://127.0.0.1:{}/b", server.port))
+        let mut res = client.request(Options, &format!("http://127.0.0.1:{}/b", server.port))
             .headers(headers)
             .send()
             .unwrap();
@@ -372,8 +366,7 @@ mod tests {
         let client = Client::new();
         let mut headers = Headers::new();
         headers.set(AccessControlRequestMethod(Get));
-        let mut res = client.request(Options,
-                                     &format!("http://127.0.0.1:{}/a", server.port))
+        let mut res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
             .unwrap();
@@ -390,14 +383,13 @@ mod tests {
         let mut headers = Headers::new();
         headers.set(AccessControlRequestMethod(Get));
         headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
-        let mut res = client.request(Options,
-                                 &format!("http://127.0.0.1:{}/a", server.port))
+        let mut res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
             .unwrap();
         let mut payload = String::new();
         res.read_to_string(&mut payload).unwrap();
-		assert_eq!(payload, "");
+        assert_eq!(payload, "");
         assert_eq!(res.status, status::NoContent);
         let allow_origin = res.headers.get::<AccessControlAllowOrigin>().unwrap();
         assert_eq!(format!("{}", allow_origin), "http://www.a.com:8080");
@@ -405,7 +397,8 @@ mod tests {
         assert_eq!(format!("{}", allow_headers),
                    "Content-Type, X-Requested-With");
         let allow_methods = res.headers.get::<AccessControlAllowMethods>().unwrap();
-        assert_eq!(format!("{}", allow_methods), "OPTIONS, GET, POST, PUT, DELETE, HEAD, TRACE, CONNECT, PATCH");
+        assert_eq!(format!("{}", allow_methods),
+                   "OPTIONS, GET, POST, PUT, DELETE, HEAD, TRACE, CONNECT, PATCH");
         let max_age = res.headers.get::<AccessControlMaxAge>().unwrap();
         assert_eq!(max_age.0, 60 * 60u32);
     }
@@ -413,21 +406,20 @@ mod tests {
     #[test]
     fn preflight_with_disallowed_origin_is_error() {
         let mut cors = CorsMiddleware::new();
-        let origins: HashSet<String> = vec!["http://www.a.com".to_owned()]
-            .into_iter().collect();
+        let origins: HashSet<String> = vec!["http://www.a.com".to_owned()].into_iter().collect();
         cors.allowed_origins = AllowedOrigins::Specific(origins);
         let server = AutoServer::with_cors(cors);
         let client = Client::new();
         let mut headers = Headers::new();
         headers.set(AccessControlRequestMethod(Get));
         headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
-        let mut res = client.request(Options,
-                                 &format!("http://127.0.0.1:{}/a", server.port))
+        let mut res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
             .unwrap();
         assert_eq!(res.status, status::BadRequest);
-        assert_eq!(to_string(&mut res), "Preflight request requesting disallowed origin 'http://www.a.com:8080'");
+        assert_eq!(to_string(&mut res),
+                   "Preflight request requesting disallowed origin 'http://www.a.com:8080'");
     }
 
     #[test]
@@ -438,16 +430,16 @@ mod tests {
         let client = Client::new();
         let mut headers = Headers::new();
         headers.set(AccessControlRequestMethod(Get));
-		let head_vec=vec![UniCase("DoesNotExist".to_owned())];
+        let head_vec = vec![UniCase("DoesNotExist".to_owned())];
         headers.set(AccessControlRequestHeaders(head_vec));
         headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
-        let mut res = client.request(Options,
-                                 &format!("http://127.0.0.1:{}/a", server.port))
+        let mut res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
             .unwrap();
         assert_eq!(res.status, status::BadRequest);
-        assert_eq!(to_string(&mut res), "Preflight request requesting disallowed header(s) DoesNotExist");
+        assert_eq!(to_string(&mut res),
+                   "Preflight request requesting disallowed header(s) DoesNotExist");
     }
 
     #[test]
@@ -458,8 +450,7 @@ mod tests {
         let client = Client::new();
         let mut headers = Headers::new();
         headers.set(Origin::from_str("http://a.com").unwrap());
-        let mut res = client.request(Options,
-                                     &format!("http://127.0.0.1:{}/a", server.port))
+        let mut res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
             .unwrap();
@@ -473,22 +464,22 @@ mod tests {
     fn preflight_with_disallowed_method_is_error() {
         // A requestion with options and origin but without
         // method is considers non-preflight
-		let cm = CorsMiddleware::new();
-		let cm2 = CorsMiddleware { allowed_methods: vec![], ..cm };
+        let cm = CorsMiddleware::new();
+        let cm2 = CorsMiddleware { allowed_methods: vec![], ..cm };
         let server = AutoServer::with_cors(cm2);
         let client = Client::new();
         let mut headers = Headers::new();
         headers.set(AccessControlRequestMethod(Patch));
         headers.set(Origin::from_str("http://a.com").unwrap());
-        let mut res = client.request(Options,
-                                     &format!("http://127.0.0.1:{}/a", server.port))
+        let mut res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
             .headers(headers)
             .send()
             .unwrap();
         assert_eq!(res.status, status::BadRequest);
         let mut payload = String::new();
         res.read_to_string(&mut payload).unwrap();
-        assert_eq!(payload, "Preflight request requesting disallowed method PATCH");
+        assert_eq!(payload,
+                   "Preflight request requesting disallowed method PATCH");
     }
 
     #[test]
