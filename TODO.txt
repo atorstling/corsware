@@ -1,0 +1,4 @@
+AccessControlAllowHeader et al with wildcard support
+Use hyper::Url for Origin parsing due to user:pass@host.com - 
+    https://en.wikipedia.org/wiki/Same-origin_policy#Origin_determination_rules 
+    http://www.piston.rs/asset\_store//url/struct.UrlRelativeSchemeData.html
