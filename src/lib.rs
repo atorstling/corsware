@@ -8,7 +8,7 @@ use iron::method::Method::*;
 use iron::status;
 use iron::headers::{Origin, AccessControlRequestMethod, AccessControlRequestHeaders,
                     AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlMaxAge,
-                    AccessControlAllowMethods};
+                    AccessControlAllowMethods, AccessControlAllowCredentials};
 use iron::middleware::{AroundMiddleware, Handler};
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -17,14 +17,22 @@ use std::iter::FromIterator;
 // For a formal definition, see
 // https://tools.ietf.org/html/rfc6454#section-4
 pub enum AllowedOrigins {
-    Any,
+    Any{ prefer_wildcard: bool },
     Specific(HashSet<String>),
 }
 
 impl AllowedOrigins {
-    fn allowed_for(&self, origin: &String) -> Option<String> {
+    fn allowed_for(&self, origin: &String, allow_credentials: bool) -> Option<String> {
         match self {
-            &AllowedOrigins::Any => Some("*".to_owned()),
+            &AllowedOrigins::Any{ prefer_wildcard } => { 
+                if allow_credentials {
+                    // Allow credentials does not permit using wildcard
+                    Some(origin.clone())
+                } else {
+                    // Use wildcard if preferred
+                    Some(if prefer_wildcard { "*".to_owned() } else { origin.clone() })
+                }
+            }
             &AllowedOrigins::Specific(ref allowed) => {
                 if allowed.contains(origin) {
                     Some(origin.clone())
@@ -60,7 +68,7 @@ impl CorsMiddleware {
                  UniCase("X-Requested-With".to_owned())];
         let exposed_headers: Vec<String> = Vec::new();
         CorsMiddleware {
-            allowed_origins: AllowedOrigins::Any,
+            allowed_origins: AllowedOrigins::Any { prefer_wildcard: false } ,
             allowed_methods: allowed_methods,
             allowed_headers: allowed_headers,
             exposed_headers: exposed_headers,
@@ -106,7 +114,7 @@ impl CorsMiddleware {
         //       will not follow redirects.
         //
         let origin_str = origin.to_string();
-        let allowed_origin = self.allowed_origins.allowed_for(&origin_str);
+        let allowed_origin = self.allowed_origins.allowed_for(&origin_str, self.allow_credentials);
         if allowed_origin.is_none() {
             let resp = Response::with((status::BadRequest,
                                        format!("Preflight request requesting \
@@ -179,10 +187,13 @@ impl CorsMiddleware {
         // - header, with the value of the Origin header as value, and add a single
         // - Access-Control-Allow-Credentials header with the case-sensitive string "true" as
         // - value.
+        if self.allow_credentials {
+            res.headers.set(AccessControlAllowCredentials);
+        }
         //
         // - Otherwise, add a single Access-Control-Allow-Origin header, with either the
         // - value of the Origin header or the string "*" as value.
-        res.headers.set(AccessControlAllowOrigin::Value(format!("{}", origin)));
+        res.headers.set(AccessControlAllowOrigin::Value(allowed_origin.unwrap()));
         //
         // - The string "*" cannot be used for a resource that supports credentials.
         //

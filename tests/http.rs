@@ -14,7 +14,7 @@ use self::hyper::header::Headers;
 use std::io::Read;
 use iron::headers::{Origin, AccessControlRequestMethod, AccessControlRequestHeaders,
                     AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlMaxAge,
-                    AccessControlAllowMethods};
+                    AccessControlAllowMethods, AccessControlAllowCredentials};
 use iron::method::Method::*;
 use iron::middleware::Handler;
 use iron_cors2::{CorsMiddleware, AllowedOrigins};
@@ -135,6 +135,38 @@ fn preflight_with_allowed_origin_sets_all_headers() {
                "OPTIONS, GET, POST, PUT, DELETE, HEAD, TRACE, CONNECT, PATCH");
     let max_age = res.headers.get::<AccessControlMaxAge>().unwrap();
     assert_eq!(max_age.0, 60 * 60u32);
+}
+
+#[test]
+fn disallowing_credentials_unsets_allow_credentials_header_in_response() {
+    let c = CorsMiddleware { allow_credentials: false, .. CorsMiddleware::new() };
+    let server = AutoServer::with_cors(c);
+    let client = Client::new();
+    let mut headers = Headers::new();
+    headers.set(AccessControlRequestMethod(Get));
+    headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
+    let res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
+        .headers(headers)
+        .send()
+        .unwrap();
+    let allow_origin = res.headers.get::<AccessControlAllowCredentials>();
+    assert_eq!(allow_origin, None);
+}
+
+#[test]
+fn allowing_credentials_sets_allow_credentials_header_in_response() {
+    let c = CorsMiddleware { allow_credentials: true, .. CorsMiddleware::new() };
+    let server = AutoServer::with_cors(c);
+    let client = Client::new();
+    let mut headers = Headers::new();
+    headers.set(AccessControlRequestMethod(Get));
+    headers.set(Origin::from_str("http://www.a.com:8080").unwrap());
+    let res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
+        .headers(headers)
+        .send()
+        .unwrap();
+    let allow_origin = res.headers.get::<AccessControlAllowCredentials>();
+    assert!(allow_origin.is_some());
 }
 
 #[test]
