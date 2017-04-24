@@ -1,46 +1,94 @@
 extern crate iron;
 extern crate unicase;
+extern crate hyper;
 
 use unicase::UniCase;
 use iron::prelude::*;
 use iron::method::Method;
 use iron::method::Method::*;
 use iron::status;
-use iron::headers::{Origin, AccessControlRequestMethod, AccessControlRequestHeaders,
+use iron::headers::Origin as OriginHeader;
+use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
                     AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlMaxAge,
                     AccessControlAllowMethods, AccessControlAllowCredentials};
 use iron::middleware::{AroundMiddleware, Handler};
 use std::collections::HashSet;
 use std::iter::FromIterator;
+use hyper::Url;
+
+// A struct which implements origin as defined in 
+// https://tools.ietf.org/html/rfc6454
+//
+// Does not cover the unique identifyer approach for 
+// non-hierarchical naming authority
+//
+// also see https://en.wikipedia.org/wiki/Same-origin_policy
+// 
+#[derive(PartialEq, Hash)]
+pub struct Origin {
+    pub scheme: String,
+    pub host: String,
+    pub port: Option<u16>,
+}
+
+impl Origin {
+    fn parse(s: &str) -> Result<Origin, String> {
+        match Url::parse(s) {
+            Err(_) => Err("Could not be parsed as Url".to_owned()),
+            Ok(url) => {
+                match url.host() {
+                    Some(host) => {
+                        Ok(Origin {
+                               scheme: url.scheme().to_owned(),
+                               host: host.to_string(),
+                               port: url.port(),
+                           })
+                    }
+                    None => Err("No host in URL".to_owned()),
+                }
+            }
+        }
+    }
+}
 
 // Using case-sensitive match of protocol://host:port
 // For a formal definition, see
 // https://tools.ietf.org/html/rfc6454#section-4
 pub enum AllowedOrigins {
-    Any{ prefer_wildcard: bool },
-    Specific(HashSet<String>),
+    Any { prefer_wildcard: bool },
+    Specific(HashSet<Url>),
 }
 
 impl AllowedOrigins {
     fn allowed_for(&self, origin: &String, allow_credentials: bool) -> Option<String> {
-        match self {
-            &AllowedOrigins::Any{ prefer_wildcard } => { 
-                if allow_credentials {
-                    // Allow credentials does not permit using wildcard
-                    Some(origin.clone())
-                } else {
-                    // Use wildcard if preferred
-                    Some(if prefer_wildcard { "*".to_owned() } else { origin.clone() })
-                }
-            }
-            &AllowedOrigins::Specific(ref allowed) => {
-                if allowed.contains(origin) {
-                    Some(origin.clone())
-                } else {
-                    None
+        match Url::parse(origin) {
+            Err(_) => None,
+            Ok(origin_url) => {
+                match self {
+                    &AllowedOrigins::Any { prefer_wildcard } => {
+                        if allow_credentials {
+                            // Allow credentials does not permit using wildcard
+                            Some(origin.clone())
+                        } else {
+                            // Use wildcard if preferred
+                            Some(if prefer_wildcard {
+                                     "*".to_owned()
+                                 } else {
+                                     origin.clone()
+                                 })
+                        }
+                    }
+                    &AllowedOrigins::Specific(ref allowed) => {
+                        if allowed.contains(&origin_url) {
+                            Some(origin.clone())
+                        } else {
+                            None
+                        }
+                    }
                 }
             }
         }
+
     }
 }
 
@@ -68,7 +116,7 @@ impl CorsMiddleware {
                  UniCase("X-Requested-With".to_owned())];
         let exposed_headers: Vec<String> = Vec::new();
         CorsMiddleware {
-            allowed_origins: AllowedOrigins::Any { prefer_wildcard: false } ,
+            allowed_origins: AllowedOrigins::Any { prefer_wildcard: false },
             allowed_methods: allowed_methods,
             allowed_headers: allowed_headers,
             exposed_headers: exposed_headers,
@@ -96,7 +144,7 @@ impl CorsMiddleware {
         // - Preflight request
         // - 1.If the Origin header is not present terminate this set of steps. The request is
         // - outside the scope of this specification.
-        let maybe_origin = req.headers.get::<Origin>();
+        let maybe_origin = req.headers.get::<OriginHeader>();
         if maybe_origin.is_none() {
             let resp = Response::with((status::BadRequest,
                                        "Preflight request without Origin header"));
@@ -232,7 +280,7 @@ impl CorsMiddleware {
         // Normal request
         // 1.If the Origin header is not present terminate this set of steps. The request is
         // outside the scope of this specification.
-        let has_origin = req.headers.get::<Origin>().is_some();
+        let has_origin = req.headers.get::<OriginHeader>().is_some();
         if !has_origin {
             return handler.handle(req);
         }
@@ -260,7 +308,7 @@ impl CorsMiddleware {
         match result {
             Ok(mut res) => {
                 // And set CORS headers
-                let origin = req.headers.get::<Origin>().unwrap();
+                let origin = req.headers.get::<OriginHeader>().unwrap();
                 res.headers.set(AccessControlAllowOrigin::Value(format!("{}", origin)));
                 Ok(res)
             }

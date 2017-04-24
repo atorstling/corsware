@@ -21,6 +21,7 @@ use iron_cors2::{CorsMiddleware, AllowedOrigins};
 use std::str::FromStr;
 use std::collections::HashSet;
 use unicase::UniCase;
+use hyper::Url;
 
 struct AutoServer {
     listening: Listening,
@@ -139,7 +140,7 @@ fn preflight_with_allowed_origin_sets_all_headers() {
 
 #[test]
 fn disallowing_credentials_unsets_allow_credentials_header_in_response() {
-    let c = CorsMiddleware { allow_credentials: false, .. CorsMiddleware::new() };
+    let c = CorsMiddleware { allow_credentials: false, ..CorsMiddleware::new() };
     let server = AutoServer::with_cors(c);
     let client = Client::new();
     let mut headers = Headers::new();
@@ -155,7 +156,7 @@ fn disallowing_credentials_unsets_allow_credentials_header_in_response() {
 
 #[test]
 fn allowing_credentials_sets_allow_credentials_header_in_response() {
-    let c = CorsMiddleware { allow_credentials: true, .. CorsMiddleware::new() };
+    let c = CorsMiddleware { allow_credentials: true, ..CorsMiddleware::new() };
     let server = AutoServer::with_cors(c);
     let client = Client::new();
     let mut headers = Headers::new();
@@ -172,7 +173,7 @@ fn allowing_credentials_sets_allow_credentials_header_in_response() {
 #[test]
 fn preflight_with_disallowed_origin_is_error() {
     let mut cors = CorsMiddleware::new();
-    let origins: HashSet<String> = vec!["http://www.a.com".to_owned()].into_iter().collect();
+    let origins: HashSet<Url> = vec![Url::parse("http://www.a.com").unwrap()].into_iter().collect();
     cors.allowed_origins = AllowedOrigins::Specific(origins);
     let server = AutoServer::with_cors(cors);
     let client = Client::new();
