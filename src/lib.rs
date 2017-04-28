@@ -29,7 +29,7 @@ use std::ascii::AsciiExt;
 pub struct Origin {
     pub scheme: String,
     pub host: String,
-    pub port: Option<u16>,
+    pub port: u16,
 }
 
 impl Origin {
@@ -76,15 +76,16 @@ impl Origin {
                         // - 3.  If the implementation doesn't support the protocol given by uri-
                         // - scheme, then generate a fresh globally unique identifier and
                         // - return that value.
+                        // 
+                        // We support all schemes wich have a default port known by hyper
                         match uri_port {
                             None => Err(format!("Unsupported URL scheme	'{}'", uri_scheme)),
                             Some(port) => {
-
                             //   7.  Return the triple (uri-scheme, uri-host, uri-port).
                             Ok(Origin {
                                    scheme: uri_scheme,
                                    host: uri_host,
-                                   port: uri_port,
+                                   port,
                                })
                                }
                         }
