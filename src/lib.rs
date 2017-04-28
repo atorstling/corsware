@@ -15,15 +15,16 @@ use iron::middleware::{AroundMiddleware, Handler};
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use hyper::Url;
+use std::ascii::AsciiExt;
 
-// A struct which implements origin as defined in 
+// A struct which implements origin as defined in
 // https://tools.ietf.org/html/rfc6454
 //
-// Does not cover the unique identifyer approach for 
+// Does not cover the unique identifyer approach for
 // non-hierarchical naming authority
 //
 // also see https://en.wikipedia.org/wiki/Same-origin_policy
-// 
+//
 #[derive(PartialEq, Hash)]
 pub struct Origin {
     pub scheme: String,
@@ -36,15 +37,58 @@ impl Origin {
         match Url::parse(s) {
             Err(_) => Err("Could not be parsed as Url".to_owned()),
             Ok(url) => {
-                match url.host() {
-                    Some(host) => {
-                        Ok(Origin {
-                               scheme: url.scheme().to_owned(),
-                               host: host.to_string(),
-                               port: url.port(),
-                           })
+                // - 1.  If the URI does not use a hierarchical element as a naming
+                // - authority (see [RFC3986], Section 3.2) or if the URI is not an
+                // - absolute URI, then generate a fresh globally unique identifier
+                // - and return that value.
+                //
+                // From https://hyper.rs/hyper/0.8.0/hyper/struct.Url.html#method.host:
+                // host(): If the URL is in a relative scheme, return its structured host.
+                match url.host_str() {
+                    None => Err(format!("No host in URL '{}'", url)),
+                    Some(host_str) => {
+                        // - 2. Let uri-scheme be the scheme component of the URI, converted to
+                        // - lowercase.
+                        let uri_scheme = url.scheme().to_owned().to_lowercase();
+
+
+                        //  4.  If uri-scheme is "file", the implementation MAY return an
+                        //  - implementation-defined value...
+                        // NOTE: file scheme not supported, would have bailed already
+
+                        // - 5. Let uri-host be the host component of the URI, converted to lower
+                        // - case (using the i;ascii-casemap collation defined in [RFC4790]).
+                        //
+                        // regarding i;ascii-casemap:
+                        // - Its equality, ordering, and substring operations are as for i;octet,
+                        // - except that at first, the lower-case letters (octet values 97-122) in
+                        // - each input string are changed to upper case (octet values 65-90).
+
+                        let uri_host = host_str.to_ascii_lowercase();
+
+                        // 6.  If there is no port component of the URI:
+                        //    1.  Let uri-port be the default port for the protocol given by
+                        //        uri-scheme.
+                        //        Otherwise:
+                        //    2.  Let uri-port be the port component of the URI.
+                        let uri_port = url.port_or_known_default();
+
+                        // - 3.  If the implementation doesn't support the protocol given by uri-
+                        // - scheme, then generate a fresh globally unique identifier and
+                        // - return that value.
+                        match uri_port {
+                            None => Err(format!("Unsupported URL scheme	'{}'", uri_scheme)),
+                            Some(port) => {
+
+                            //   7.  Return the triple (uri-scheme, uri-host, uri-port).
+                            Ok(Origin {
+                                   scheme: uri_scheme,
+                                   host: uri_host,
+                                   port: uri_port,
+                               })
+                               }
+                        }
                     }
-                    None => Err("No host in URL".to_owned()),
                 }
             }
         }
