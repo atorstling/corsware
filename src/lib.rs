@@ -101,31 +101,31 @@ impl Origin {
 // https://tools.ietf.org/html/rfc6454#section-4
 pub enum AllowedOrigins {
     Any { prefer_wildcard: bool },
-    Specific(HashSet<Url>),
+    Specific(HashSet<Origin>),
 }
 
 impl AllowedOrigins {
-    fn allowed_for(&self, origin: &String, allow_credentials: bool) -> Option<String> {
-        match Url::parse(origin) {
+    fn allowed_for(&self, origin_string: &String, allow_credentials: bool) -> Option<String> {
+        match Origin::parse(origin_string) {
             Err(_) => None,
-            Ok(origin_url) => {
+            Ok(origin) => {
                 match self {
                     &AllowedOrigins::Any { prefer_wildcard } => {
                         if allow_credentials {
                             // Allow credentials does not permit using wildcard
-                            Some(origin.clone())
+                            Some(origin_string.clone())
                         } else {
                             // Use wildcard if preferred
                             Some(if prefer_wildcard {
                                      "*".to_owned()
                                  } else {
-                                     origin.clone()
+                                     origin_string.clone()
                                  })
                         }
                     }
                     &AllowedOrigins::Specific(ref allowed) => {
-                        if allowed.contains(&origin_url) {
-                            Some(origin.clone())
+                        if allowed.contains(&origin) {
+                            Some(origin_string.clone())
                         } else {
                             None
                         }
