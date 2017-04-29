@@ -1,20 +1,6 @@
 extern crate iron_cors2;
-extern crate router;
-extern crate iron;
-extern crate unicase;
-extern crate hyper;
-extern crate mount;
 use iron_cors2::{Origin};
-use std::io::Read;
-use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
-                    AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlMaxAge,
-                    AccessControlAllowMethods, AccessControlAllowCredentials};
-use iron::method::Method::*;
-use iron::middleware::Handler;
-use std::str::FromStr;
 use std::collections::HashSet;
-use unicase::UniCase;
-use hyper::Url;
 
 #[test]
 fn identical_origin_is_equal() {
@@ -80,4 +66,25 @@ fn very_different_url_but_still_same_origin() {
     let o1 = Origin::parse("http://example.com");
     let o2 = Origin::parse("hTtP://user:password@eXampLe.cOm:80/a/path.html");
     assert_eq!(o1, o2);
+}
+
+#[test]
+fn hashing_works() {
+    let o1 = Origin::parse("http://example.com").unwrap();
+    let o2 = Origin::parse("http://example.com").unwrap();
+    let mut s: HashSet<Origin> = HashSet::new();
+    s.insert(o1);
+    assert!(s.contains(&o2));
+}
+
+#[test]
+fn bogus_url_gives_nice_error() {
+    let o1 = Origin::parse("lsakdjf[]");
+    assert_eq!(o1, Err("Could not be parsed as URL: 'lsakdjf[]'".to_owned()));
+}
+
+#[test]
+fn relative_uri_gives_nice_error() {
+    let o1 = Origin::parse("/icons/logo.gif");
+    assert_eq!(o1, Err("Could not be parsed as URL: '/icons/logo.gif'".to_owned()));
 }

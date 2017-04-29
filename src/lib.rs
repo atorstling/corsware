@@ -35,7 +35,7 @@ pub struct Origin {
 impl Origin {
     pub fn parse(s: &str) -> Result<Origin, String> {
         match Url::parse(s) {
-            Err(_) => Err("Could not be parsed as Url".to_owned()),
+            Err(_) => Err(format!("Could not be parsed as URL: '{}'", s)),
             Ok(url) => {
                 // - 1.  If the URI does not use a hierarchical element as a naming
                 // - authority (see [RFC3986], Section 3.2) or if the URI is not an
