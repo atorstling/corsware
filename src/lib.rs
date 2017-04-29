@@ -25,7 +25,7 @@ use std::ascii::AsciiExt;
 //
 // also see https://en.wikipedia.org/wiki/Same-origin_policy
 //
-#[derive(PartialEq, Hash)]
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub struct Origin {
     pub scheme: String,
     pub host: String,
@@ -33,7 +33,7 @@ pub struct Origin {
 }
 
 impl Origin {
-    fn parse(s: &str) -> Result<Origin, String> {
+    pub fn parse(s: &str) -> Result<Origin, String> {
         match Url::parse(s) {
             Err(_) => Err("Could not be parsed as Url".to_owned()),
             Ok(url) => {
