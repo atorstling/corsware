@@ -174,7 +174,8 @@ fn allowing_credentials_sets_allow_credentials_header_in_response() {
 #[test]
 fn preflight_with_disallowed_origin_is_error() {
     let mut cors = CorsMiddleware::new();
-    let origins: HashSet<Origin> = vec![Origin::parse("http://www.a.com").unwrap()].into_iter().collect();
+    let origins: HashSet<Origin> =
+        vec![Origin::parse("http://www.a.com").unwrap()].into_iter().collect();
     cors.allowed_origins = AllowedOrigins::Specific(origins);
     let server = AutoServer::with_cors(cors);
     let client = Client::new();
