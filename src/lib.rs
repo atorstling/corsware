@@ -32,7 +32,7 @@ impl AllowedOrigins {
     /// flag is supplied since AccessControlAllowOrigin * is forbidden when credentials
     /// are allowed.
     ///
-    /// We're not using the iron Origin header to construct an Origin directly, since 
+    /// We're not using the iron Origin header to construct an Origin directly, since
     /// we are dependent on url.port_or_known_default() to get the default port. This
     /// method is only available after parsing the Origin header to an URL.
     fn allowed_for(&self, origin_string: &String, allow_credentials: bool) -> Option<String> {
