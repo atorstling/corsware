@@ -1,3 +1,1 @@
 AccessControlAllowHeader et al with wildcard support
-Construct origin from parsed host
-Support null or empty origin?

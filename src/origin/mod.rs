@@ -3,7 +3,6 @@ extern crate iron;
 
 use self::url::Url;
 use std::ascii::AsciiExt;
-use iron::headers::Origin as OriginHeader;
 
 /// A struct which implements the concept
 /// 'Web Origin' as defined in
@@ -28,10 +27,6 @@ pub struct Origin {
 }
 
 impl Origin {
-    pub fn from(oh: &OriginHeader) -> Result<Origin, String> {
-        Self::parse(&oh.to_string())
-    }
-
     /// Parses the given string as an origin.
     /// #Errors
     /// Errors are returned if

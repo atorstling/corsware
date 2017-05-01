@@ -2,7 +2,7 @@ extern crate iron_cors2;
 extern crate router;
 extern crate iron;
 extern crate unicase;
-extern crate hyper;
+#[macro_use] extern crate hyper;
 extern crate mount;
 use iron::Listening;
 use self::router::Router;
@@ -190,6 +190,40 @@ fn preflight_with_disallowed_origin_is_error() {
                "Preflight request requesting disallowed origin 'http://www.a.com:8080'");
 }
 
+header! { (NullableOrigin, "Origin") => [String] }
+
+#[test]
+fn preflight_with_null_origin_is_not_allowed() {
+    // According to https://tools.ietf.org/id/draft-abarth-origin-03.html#rfc.section.6
+    // you shouldn't be able to whitelist a "null" Origin.
+    //
+    // The "null" origin indicates that the Server has hid the Origin since it couldn't
+    // property determine it and is set on data: and file: -Url and such. 
+    //
+    // There have been real vulns due to this: 
+    // https://security.stackexchange.com/questions/145326/
+    // how-did-the-facebook-originull-vulnerablity-of-access-control-allow-origin-null
+    //
+    // Seems as if Iron refuses to parse the Origin header if its null as is:
+    // http://azerupi.github.io/mdBook/iron/headers/struct.Origin.html
+    let mut cors = CorsMiddleware::new();
+    let origins: HashSet<Origin> =
+        vec![Origin::parse("http://www.a.com").unwrap()].into_iter().collect();
+    cors.allowed_origins = AllowedOrigins::Specific(origins);
+    let server = AutoServer::with_cors(cors);
+    let client = Client::new();
+    let mut headers = Headers::new();
+    headers.set(AccessControlRequestMethod(Get));
+    headers.set(NullableOrigin("null".to_owned()));
+    let mut res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
+        .headers(headers)
+        .send()
+        .unwrap();
+    assert_eq!(res.status, status::BadRequest);
+    assert_eq!(to_string(&mut res),
+               "Preflight request without Origin header");
+}
+
 #[test]
 fn preflight_with_disallowed_header_is_error() {
     let mut cors = CorsMiddleware::new();
@@ -268,6 +302,7 @@ fn normal_request_allows_origin() {
     assert!(res.headers.get::<AccessControlMaxAge>().is_none());
 }
 
+
 #[test]
 fn normal_request_without_origin_is_passthrough() {
     let server = AutoServer::new();
@@ -279,3 +314,4 @@ fn normal_request_without_origin_is_passthrough() {
     assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
     assert!(res.headers.get::<AccessControlMaxAge>().is_none());
 }
+

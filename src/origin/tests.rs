@@ -1,5 +1,3 @@
-use iron::headers::{Origin as OriginHeader, AccessControlAllowOrigin, Host};
-
 use super::Origin;
 use std::collections::HashSet;
 
@@ -109,13 +107,3 @@ fn can_access_fields() {
     assert_eq!(o.port(), 16);
 }
 
-#[test]
-fn can_parse_origin_heaer() {
-    let scheme = "http".to_owned();
-    let hostname = "example.com".to_owned();
-    let port = Some(80u16);
-    let host = Host { hostname, port };
-    let oh = OriginHeader { scheme, host };
-    let o = Origin::from(&oh);
-    assert_eq!(o, Origin::parse("http://example.com"));
-}
