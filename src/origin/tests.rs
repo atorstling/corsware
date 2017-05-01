@@ -106,4 +106,3 @@ fn can_access_fields() {
     assert_eq!(o.host(), &"h".to_owned());
     assert_eq!(o.port(), 16);
 }
-

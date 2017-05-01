@@ -10,7 +10,8 @@ use iron::status;
 use iron::headers::Origin as OriginHeader;
 use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
                     AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlMaxAge,
-                    AccessControlAllowMethods, AccessControlAllowCredentials};
+                    AccessControlAllowMethods, AccessControlAllowCredentials,
+                    AccessControlExposeHeaders};
 use iron::middleware::{AroundMiddleware, Handler};
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -18,17 +19,25 @@ pub use origin::Origin;
 
 mod origin;
 
-// Using case-sensitive match of protocol://host:port
-// For a formal definition, see
-// https://tools.ietf.org/html/rfc6454#section-4
+/// Specifies which Origins are allowed to access this resource
 pub enum AllowedOrigins {
-    Any { prefer_wildcard: bool },
+    /// Any Origin is allowed.
+    Any {
+        /// If set, wildcard ('*') will be used as value
+        /// for AccessControlAllowOrigin if possible. If not set,
+        /// echoing the incoming Origin will be preferred.
+        /// If credentials are allowed, echoing will always be used.
+        prefer_wildcard: bool,
+    },
+    /// Allow a specific set of origins. Allowing for null origins is
+    /// not supported, mainly due to it being considered bad practice:
+    /// https://w3c.github.io/webappsec-cors-for-developers/
     Specific(HashSet<Origin>),
 }
 
 impl AllowedOrigins {
-    /// Which origin is supposed to be returned as AccessControlAllowOrigin
-    /// given the specified Origin header in the request? The allow_credentials
+    /// Returns the value of AccessControlAllowOrigin
+    /// given the specified Origin header in the request. The allow_credentials
     /// flag is supplied since AccessControlAllowOrigin * is forbidden when credentials
     /// are allowed.
     ///
@@ -67,7 +76,7 @@ impl AllowedOrigins {
     }
 }
 
-
+/// An iron middleware which implements CORS
 pub struct CorsMiddleware {
     pub allowed_origins: AllowedOrigins,
     // Having allowed methods "any" would not make much sense
@@ -75,7 +84,7 @@ pub struct CorsMiddleware {
     // the allowed-methods header
     pub allowed_methods: Vec<Method>,
     pub allowed_headers: Vec<UniCase<String>>,
-    pub exposed_headers: Vec<String>,
+    pub exposed_headers: Vec<UniCase<String>>,
     pub allow_credentials: bool,
     pub max_age_seconds: u32,
 }
@@ -89,7 +98,7 @@ impl CorsMiddleware {
                  UniCase("Content-Type".to_owned()),
                  // Set by some js libs
                  UniCase("X-Requested-With".to_owned())];
-        let exposed_headers: Vec<String> = Vec::new();
+        let exposed_headers: Vec<UniCase<String>> = Vec::new();
         CorsMiddleware {
             allowed_origins: AllowedOrigins::Any { prefer_wildcard: false },
             allowed_methods: allowed_methods,
@@ -255,8 +264,15 @@ impl CorsMiddleware {
         // Normal request
         // 1.If the Origin header is not present terminate this set of steps. The request is
         // outside the scope of this specification.
-        let has_origin = req.headers.get::<OriginHeader>().is_some();
-        if !has_origin {
+        let have_origin;
+        {
+            let maybe_origin = req.headers.get::<OriginHeader>();
+            have_origin = maybe_origin.is_some();
+        }
+        if !have_origin {
+            // No origin, treat as normal request.
+            // We could return error here if we wanted according to
+            // https://tools.ietf.org/id/draft-abarth-origin-03.html#rfc.section.6
             return handler.handle(req);
         }
         //
@@ -266,29 +282,46 @@ impl CorsMiddleware {
         //
         // Note: Always matching is acceptable since the list of origins can be unbounded.
         //
-        // 3. If the resource supports credentials add a single Access-Control-Allow-Origin
-        // header, with the value of the Origin header as value, and add a single
-        // Access-Control-Allow-Credentials header with the case-sensitive string "true" as
-        // value.
-        //
-        // Otherwise, add a single Access-Control-Allow-Origin header, with either the
-        // value of the Origin header or the string "*" as value.
-        //
-        // Note: The string "*" cannot be used for a resource that supports credentials.
-        //
-        // 4. If the list of exposed headers is not empty add one or more
-        // Access-Control-Expose-Headers headers, with as values the header field names
-        // given in the list of exposed headers.
+        let origin = req.headers
+            .get::<OriginHeader>()
+            .unwrap()
+            .clone();
+        let origin_str = origin.to_string();
+        let allowed_origin = self.allowed_origins.allowed_for(&origin_str, self.allow_credentials);
+        if allowed_origin.is_none() {
+            let resp = Response::with((status::BadRequest,
+                                       format!("Preflight request requesting \
+                                       disallowed origin '{}'",
+                                               origin_str)));
+            return Ok(resp);
+        }
         let result = handler.handle(req);
         match result {
             Ok(mut res) => {
-                // And set CORS headers
-                let origin = req.headers.get::<OriginHeader>().unwrap();
-                res.headers.set(AccessControlAllowOrigin::Value(format!("{}", origin)));
+                //
+                // 3. If the resource supports credentials add a single Access-Control-Allow-Origin
+                // header, with the value of the Origin header as value, and add a single
+                // Access-Control-Allow-Credentials header with the case-sensitive string "true" as
+                // value.
+                //
+                // Otherwise, add a single Access-Control-Allow-Origin header, with either the
+                // value of the Origin header or the string "*" as value.
+                //
+                // Note: The string "*" cannot be used for a resource that supports credentials.
+                if self.allow_credentials {
+                    res.headers.set(AccessControlAllowCredentials);
+                }
+                res.headers.set(AccessControlAllowOrigin::Value(allowed_origin.unwrap()));
+                //
+                // 4. If the list of exposed headers is not empty add one or more
+                // Access-Control-Expose-Headers headers, with as values the header field names
+                // given in the list of exposed headers.
+                res.headers.set(AccessControlExposeHeaders(self.exposed_headers.clone()));
                 Ok(res)
             }
             _ => result,
         }
+
     }
 }
 

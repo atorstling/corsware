@@ -2,7 +2,8 @@ extern crate iron_cors2;
 extern crate router;
 extern crate iron;
 extern crate unicase;
-#[macro_use] extern crate hyper;
+#[macro_use]
+extern crate hyper;
 extern crate mount;
 use iron::Listening;
 use self::router::Router;
@@ -198,9 +199,9 @@ fn preflight_with_null_origin_is_not_allowed() {
     // you shouldn't be able to whitelist a "null" Origin.
     //
     // The "null" origin indicates that the Server has hid the Origin since it couldn't
-    // property determine it and is set on data: and file: -Url and such. 
+    // property determine it and is set on data: and file: -Url and such.
     //
-    // There have been real vulns due to this: 
+    // There have been real vulns due to this:
     // https://security.stackexchange.com/questions/145326/
     // how-did-the-facebook-originull-vulnerablity-of-access-control-allow-origin-null
     //
@@ -314,4 +315,3 @@ fn normal_request_without_origin_is_passthrough() {
     assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
     assert!(res.headers.get::<AccessControlMaxAge>().is_none());
 }
-
