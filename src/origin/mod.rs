@@ -37,7 +37,7 @@ impl Origin {
     ///
     /// #Examples
     /// ```
-    /// use iron_cors2::origin::Origin;
+    /// use iron_cors2::Origin;
     /// let o1 = Origin::parse("http://exämple.com");
     /// let o2 = Origin::parse("hTtP://user:password@eXämpLe.cOm:80/a/path.html");
     /// assert_eq!(o1, o2);
@@ -107,7 +107,7 @@ impl Origin {
     /// Returns the scheme of the origin in lower case.
     /// #Example
     /// ```
-    /// use iron_cors2::origin::Origin;
+    /// use iron_cors2::Origin;
     /// assert_eq!(Origin::parse("hTtP://a.com").unwrap().scheme(), &"http".to_owned());
     /// ```
     pub fn scheme(&self) -> &String {
@@ -117,7 +117,7 @@ impl Origin {
     /// Returns the host of the origin in ascii lower case.
     /// #Example
     /// ```
-    /// use iron_cors2::origin::Origin;
+    /// use iron_cors2::Origin;
     /// assert_eq!(Origin::parse("ftp://Aö.coM").unwrap().host(), &"xn--a-1ga.com".to_owned());
     /// ```
     pub fn host(&self) -> &String {
@@ -128,7 +128,7 @@ impl Origin {
     /// port if not set explicitly
     /// #Example
     /// ```
-    /// use iron_cors2::origin::Origin;
+    /// use iron_cors2::Origin;
     /// assert_eq!(Origin::parse("ftp://a.com").unwrap().port(), 21);
     /// ```
     pub fn port(&self) -> u16 {

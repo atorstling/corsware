@@ -14,9 +14,9 @@ use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
 use iron::middleware::{AroundMiddleware, Handler};
 use std::collections::HashSet;
 use std::iter::FromIterator;
-use origin::Origin;
+pub use origin::Origin;
 
-pub mod origin;
+mod origin;
 
 // Using case-sensitive match of protocol://host:port
 // For a formal definition, see

@@ -18,8 +18,7 @@ use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
                     AccessControlAllowMethods, AccessControlAllowCredentials};
 use iron::method::Method::*;
 use iron::middleware::Handler;
-use iron_cors2::{CorsMiddleware, AllowedOrigins};
-use iron_cors2::origin::Origin;
+use iron_cors2::{CorsMiddleware, AllowedOrigins, Origin};
 use std::str::FromStr;
 use std::collections::HashSet;
 use unicase::UniCase;
