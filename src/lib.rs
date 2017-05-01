@@ -27,6 +27,14 @@ pub enum AllowedOrigins {
 }
 
 impl AllowedOrigins {
+    /// Which origin is supposed to be returned as AccessControlAllowOrigin
+    /// given the specified Origin header in the request? The allow_credentials
+    /// flag is supplied since AccessControlAllowOrigin * is forbidden when credentials
+    /// are allowed.
+    ///
+    /// We're not using the iron Origin header to construct an Origin directly, since 
+    /// we are dependent on url.port_or_known_default() to get the default port. This
+    /// method is only available after parsing the Origin header to an URL.
     fn allowed_for(&self, origin_string: &String, allow_credentials: bool) -> Option<String> {
         match Origin::parse(origin_string) {
             Err(_) => None,
