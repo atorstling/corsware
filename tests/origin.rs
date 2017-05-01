@@ -1,5 +1,5 @@
 extern crate iron_cors2;
-use iron_cors2::{Origin};
+use iron_cors2::origin::Origin;
 use std::collections::HashSet;
 
 #[test]
@@ -80,11 +80,29 @@ fn hashing_works() {
 #[test]
 fn bogus_url_gives_nice_error() {
     let o1 = Origin::parse("lsakdjf[]");
-    assert_eq!(o1, Err("Could not be parsed as URL: 'lsakdjf[]'".to_owned()));
+    assert_eq!(o1,
+               Err("Could not be parsed as URL: 'lsakdjf[]'".to_owned()));
 }
 
 #[test]
 fn relative_uri_gives_nice_error() {
     let o1 = Origin::parse("/icons/logo.gif");
-    assert_eq!(o1, Err("Could not be parsed as URL: '/icons/logo.gif'".to_owned()));
+    assert_eq!(o1,
+               Err("Could not be parsed as URL: '/icons/logo.gif'".to_owned()));
+}
+
+#[test]
+fn data_url_gives_nice_error() {
+    let o1 = Origin::parse("data:image/gif;base64,R0lGODdhMAAwAP");
+    assert_eq!(o1, Err("No host in URL 'data:image/gif;base64,R0lGODdhMAAwAP'".to_owned()));
+}
+
+#[test]
+fn can_access_fields() {
+    //should not compile
+    //let o = Origin{ scheme, host, port: 16 };
+    let o = Origin::parse("s://h:16").unwrap();
+    assert_eq!(o.scheme(), &"s".to_owned());
+    assert_eq!(o.host(), &"h".to_owned());
+    assert_eq!(o.port(), 16);
 }
