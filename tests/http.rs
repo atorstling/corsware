@@ -15,8 +15,8 @@ use self::hyper::header::Headers;
 use std::io::Read;
 use iron::headers::Origin as OriginHeader;
 use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
-                    AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlMaxAge,
-                    AccessControlAllowMethods, AccessControlAllowCredentials};
+                    AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlAllowMethods,
+                    AccessControlAllowCredentials, AccessControlExposeHeaders, AccessControlMaxAge};
 use iron::method::Method::*;
 use iron::middleware::Handler;
 use iron_cors2::{CorsMiddleware, AllowedOrigins, Origin};
@@ -286,8 +286,10 @@ fn preflight_with_disallowed_method_is_error() {
 }
 
 #[test]
-fn normal_request_allows_origin() {
-    let server = AutoServer::new();
+fn normal_request_allows_origin_and_exposes_headers() {
+    let cm1 = CorsMiddleware::new();
+    let cm = CorsMiddleware { exposed_headers : vec![UniCase("X-ExposeMe".to_owned())], .. cm1 };
+    let server = AutoServer::with_cors(cm);
     let client = Client::new();
     let mut headers = Headers::new();
     headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
@@ -297,7 +299,9 @@ fn normal_request_allows_origin() {
         .unwrap();
     assert_eq!(res.status, status::ImATeapot);
     let allow_origin = res.headers.get::<AccessControlAllowOrigin>().unwrap();
-    assert_eq!(format!("{}", allow_origin), "http://www.a.com:8080");
+    assert_eq!(allow_origin.to_string(), "http://www.a.com:8080");
+    let expose_headers = res.headers.get::<AccessControlExposeHeaders>().unwrap();
+    assert_eq!(expose_headers.0, vec![UniCase("X-ExposeMe")]);
     assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
     assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
     assert!(res.headers.get::<AccessControlMaxAge>().is_none());
@@ -313,5 +317,6 @@ fn normal_request_without_origin_is_passthrough() {
     assert!(res.headers.get::<AccessControlAllowOrigin>().is_none());
     assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
     assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
+    assert!(res.headers.get::<AccessControlExposeHeaders>().is_none());
     assert!(res.headers.get::<AccessControlMaxAge>().is_none());
 }
