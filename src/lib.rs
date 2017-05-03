@@ -290,7 +290,7 @@ impl CorsMiddleware {
         let allowed_origin = self.allowed_origins.allowed_for(&origin_str, self.allow_credentials);
         if allowed_origin.is_none() {
             let resp = Response::with((status::BadRequest,
-                                       format!("Preflight request requesting \
+                                       format!("Normal request requesting \
                                        disallowed origin '{}'",
                                                origin_str)));
             return Ok(resp);
