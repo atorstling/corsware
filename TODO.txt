@@ -1,6 +1,2 @@
 AccessControlAllowHeader et al with wildcard support
-Check handle_normal
-Normal request with incorrect origin
-Expose headers
-What to do when origin is missing?
 Doc
