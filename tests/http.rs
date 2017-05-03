@@ -286,26 +286,12 @@ fn preflight_with_disallowed_method_is_error() {
 }
 
 #[test]
-fn normal_request_allows_origin() {
-    let server = AutoServer::new();
-    let client = Client::new();
-    let mut headers = Headers::new();
-    headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
-    let res = client.get(&format!("http://127.0.0.1:{}/a", server.port))
-        .headers(headers)
-        .send()
-        .unwrap();
-    assert_eq!(res.status, status::ImATeapot);
-    let allow_origin = res.headers.get::<AccessControlAllowOrigin>().unwrap();
-    assert_eq!(allow_origin.to_string(), "http://www.a.com:8080");
-    assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
-    assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
-}
-
-#[test]
-fn normal_request_exposes_headers() {
+fn normal_request_sets_right_headers() {
     let cm1 = CorsMiddleware::new();
-    let cm = CorsMiddleware { exposed_headers : vec![UniCase("X-ExposeMe".to_owned())], .. cm1 };
+    let cm = CorsMiddleware { 
+        exposed_headers : vec![UniCase("X-ExposeMe".to_owned())], 
+        allow_credentials: true,
+        .. cm1 };
     let server = AutoServer::with_cors(cm);
     let client = Client::new();
     let mut headers = Headers::new();
@@ -317,8 +303,14 @@ fn normal_request_exposes_headers() {
     assert_eq!(res.status, status::ImATeapot);
     let expose_headers = res.headers.get::<AccessControlExposeHeaders>().unwrap();
     assert_eq!(expose_headers.0, vec![UniCase("X-ExposeMe")]);
+    assert_eq!(res.headers.get::<AccessControlAllowOrigin>().unwrap().to_string(),
+        "http://www.a.com:8080");
+    assert_eq!(res.headers.get::<AccessControlAllowCredentials>().unwrap().to_string(),
+        "true");
+    assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
+    assert!(res.headers.get::<AccessControlMaxAge>().is_none());
+    assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
 }
-
 
 #[test]
 fn normal_request_without_origin_is_passthrough() {
