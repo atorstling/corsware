@@ -331,3 +331,22 @@ fn normal_request_without_origin_is_passthrough() {
     assert!(res.headers.get::<AccessControlExposeHeaders>().is_none());
     assert!(res.headers.get::<AccessControlMaxAge>().is_none());
 }
+
+#[test]
+fn handler_ergonomy() {
+    let get_handler = |_: &mut Request| Ok(Response::with((status::ImATeapot, "get")));
+    let put_handler = |_: &mut Request| Ok(Response::with((status::ImATeapot, "put")));
+
+    let mut router = Router::new();
+    router.get("", get_handler, "get_a");
+    router.put("", put_handler, "put_a");
+
+    let cors = CorsMiddleware::new();
+    let chain = cors.decorate(Box::new(router));
+
+    let server = AutoServer::with_handler(chain);
+
+    let client = Client::new();
+    let res = client.get(&format!("http://127.0.0.1:{}", server.port)).send().unwrap();
+    assert_eq!(res.status, status::ImATeapot);
+}
