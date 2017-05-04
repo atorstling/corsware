@@ -329,12 +329,13 @@ impl CorsMiddleware {
 
     }
 
+    /// Util function for wrapping the supplied handler with this CorsMiddleware.
+    /// Works by constructing a chain with only this middleware linked.
     pub fn decorate<T: Handler>(self, handler: T) -> Chain {
         let mut chain = Chain::new(handler);
         chain.link_around(self);
         chain
     }
-
 }
 
 impl AroundMiddleware for CorsMiddleware {
