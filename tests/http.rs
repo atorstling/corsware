@@ -288,10 +288,11 @@ fn preflight_with_disallowed_method_is_error() {
 #[test]
 fn normal_request_sets_right_headers() {
     let cm1 = CorsMiddleware::new();
-    let cm = CorsMiddleware { 
-        exposed_headers : vec![UniCase("X-ExposeMe".to_owned())], 
+    let cm = CorsMiddleware {
+        exposed_headers: vec![UniCase("X-ExposeMe".to_owned())],
         allow_credentials: true,
-        .. cm1 };
+        ..cm1
+    };
     let server = AutoServer::with_cors(cm);
     let client = Client::new();
     let mut headers = Headers::new();
@@ -303,10 +304,16 @@ fn normal_request_sets_right_headers() {
     assert_eq!(res.status, status::ImATeapot);
     let expose_headers = res.headers.get::<AccessControlExposeHeaders>().unwrap();
     assert_eq!(expose_headers.0, vec![UniCase("X-ExposeMe")]);
-    assert_eq!(res.headers.get::<AccessControlAllowOrigin>().unwrap().to_string(),
-        "http://www.a.com:8080");
-    assert_eq!(res.headers.get::<AccessControlAllowCredentials>().unwrap().to_string(),
-        "true");
+    assert_eq!(res.headers
+                   .get::<AccessControlAllowOrigin>()
+                   .unwrap()
+                   .to_string(),
+               "http://www.a.com:8080");
+    assert_eq!(res.headers
+                   .get::<AccessControlAllowCredentials>()
+                   .unwrap()
+                   .to_string(),
+               "true");
     assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
     assert!(res.headers.get::<AccessControlMaxAge>().is_none());
     assert!(res.headers.get::<AccessControlAllowMethods>().is_none());

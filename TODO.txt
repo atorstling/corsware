@@ -1,2 +1,3 @@
-AccessControlAllowHeader et al with wildcard support
+AccessControlAllowHeader et al with wildcard support - Not possible without
+  modifying iron definition of AccessControlAllowHeader struct
 Doc

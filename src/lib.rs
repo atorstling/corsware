@@ -79,9 +79,6 @@ impl AllowedOrigins {
 /// An iron middleware which implements CORS
 pub struct CorsMiddleware {
     pub allowed_origins: AllowedOrigins,
-    // Having allowed methods "any" would not make much sense
-    // since we need to enumerate all methods when returning
-    // the allowed-methods header
     pub allowed_methods: Vec<Method>,
     pub allowed_headers: Vec<UniCase<String>>,
     pub exposed_headers: Vec<UniCase<String>>,
@@ -90,6 +87,9 @@ pub struct CorsMiddleware {
 }
 
 impl CorsMiddleware {
+    /// New middleware with reasonable defaults.
+    /// Allows any origin, all methods, the headers 'Content-Type' and 'X-Requested-With',
+    /// does not allow credentials and has a MaxAge of 60 minutes.
     pub fn new() -> CorsMiddleware {
         let allowed_methods: Vec<Method> = vec![Options, Get, Post, Put, Delete, Head, Trace,
                                                 Connect, Patch];
@@ -109,6 +109,8 @@ impl CorsMiddleware {
         }
     }
 
+    /// Handle a potential CORS request. Detects if this is a
+    /// preflight or normal method, adding CORS headers as appropriate
     fn handle(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
         // http://stackoverflow.com/questions/14015118/
         // what-is-the-expected-response-to-an-invalid-cors-request
@@ -121,6 +123,7 @@ impl CorsMiddleware {
         }
     }
 
+    /// Handle a preflight request
     fn handle_preflight(&self, req: &mut Request, _: &Handler) -> IronResult<Response> {
         // Successful preflight status code is NoContent
         let mut res = Response::with((status::NoContent));
@@ -260,10 +263,11 @@ impl CorsMiddleware {
         Ok(res)
     }
 
+    /// Handle a normal (i.e non-preflight) CORS request
     fn handle_normal(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
         // Normal request
-        // 1.If the Origin header is not present terminate this set of steps. The request is
-        // outside the scope of this specification.
+        // - 1.If the Origin header is not present terminate this set of steps. The request is
+        // - outside the scope of this specification.
         let have_origin;
         {
             let maybe_origin = req.headers.get::<OriginHeader>();
@@ -276,11 +280,11 @@ impl CorsMiddleware {
             return handler.handle(req);
         }
         //
-        // 2.If the value of the Origin header is not a case-sensitive match for any of the
-        // values in list of origins, do not set any additional headers and terminate this
-        // set of steps.
+        // - 2.If the value of the Origin header is not a case-sensitive match for any of the
+        // - values in list of origins, do not set any additional headers and terminate this
+        // - set of steps.
         //
-        // Note: Always matching is acceptable since the list of origins can be unbounded.
+        // - Note: Always matching is acceptable since the list of origins can be unbounded.
         //
         let origin = req.headers
             .get::<OriginHeader>()
@@ -299,23 +303,24 @@ impl CorsMiddleware {
         match result {
             Ok(mut res) => {
                 //
-                // 3. If the resource supports credentials add a single Access-Control-Allow-Origin
-                // header, with the value of the Origin header as value, and add a single
-                // Access-Control-Allow-Credentials header with the case-sensitive string "true" as
-                // value.
+                // - 3. If the resource supports credentials add a single
+                // - Access-Control-Allow-Origin
+                // - header, with the value of the Origin header as value, and add a single
+                // - Access-Control-Allow-Credentials header with the case-sensitive string
+                // - "true" as value.
                 //
-                // Otherwise, add a single Access-Control-Allow-Origin header, with either the
-                // value of the Origin header or the string "*" as value.
+                // - Otherwise, add a single Access-Control-Allow-Origin header, with either the
+                // - value of the Origin header or the string "*" as value.
                 //
-                // Note: The string "*" cannot be used for a resource that supports credentials.
+                // - Note: The string "*" cannot be used for a resource that supports credentials.
                 if self.allow_credentials {
                     res.headers.set(AccessControlAllowCredentials);
                 }
                 res.headers.set(AccessControlAllowOrigin::Value(allowed_origin.unwrap()));
                 //
-                // 4. If the list of exposed headers is not empty add one or more
-                // Access-Control-Expose-Headers headers, with as values the header field names
-                // given in the list of exposed headers.
+                // - 4. If the list of exposed headers is not empty add one or more
+                // - Access-Control-Expose-Headers headers, with as values the header field names
+                // - given in the list of exposed headers.
                 res.headers.set(AccessControlExposeHeaders(self.exposed_headers.clone()));
                 Ok(res)
             }
