@@ -342,7 +342,7 @@ fn handler_ergonomy() {
     router.put("", put_handler, "put_a");
 
     let cors = CorsMiddleware::new();
-    let chain = cors.decorate(Box::new(router));
+    let chain = cors.decorate(router);
 
     let server = AutoServer::with_handler(chain);
 

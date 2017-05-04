@@ -329,8 +329,8 @@ impl CorsMiddleware {
 
     }
 
-    pub fn decorate<T: Handler>(self, handler: Box<T>) -> Chain {
-        let mut chain = Chain::new(*handler);
+    pub fn decorate<T: Handler>(self, handler: T) -> Chain {
+        let mut chain = Chain::new(handler);
         chain.link_around(self);
         chain
     }
