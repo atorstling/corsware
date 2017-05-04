@@ -30,7 +30,8 @@ pub enum AllowedOrigins {
         prefer_wildcard: bool,
     },
     /// Allow a specific set of origins. Allowing for null origins is
-    /// not supported, mainly due to it being considered bad practice:
+    /// not supported. Partly since the Iron cannot parse a null Origin header,
+    /// but also due to it being considered bad practice:
     /// https://w3c.github.io/webappsec-cors-for-developers/
     Specific(HashSet<Origin>),
 }

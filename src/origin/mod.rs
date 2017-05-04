@@ -4,28 +4,29 @@ extern crate iron;
 use self::url::Url;
 use std::ascii::AsciiExt;
 
-/// A struct which implements the concept
-/// 'Web Origin' as defined in
+/// A struct which implements the concept 'Web Origin' as defined in
 /// https://tools.ietf.org/html/rfc6454.
 ///
-/// This implementation only parses valid URLs into
-/// Origins and returns error on all other strings,
-/// including "null", "", and random id:s.
+/// This implementation only considers hierarchical URLs.
 ///
-/// The rationale behind this decision is that any
-/// origin which is not a (scheme, host, port)-triple should never be
-/// equal to another origin. This has the implication
-/// that it's unneccesary to compare them to any other and
-/// we might as well return parse error and handle the
+/// The rationale behind skipping other valid origins such as URLs,
+/// random id:s and null is that any origin which is not a
+/// (scheme, host, port)-triple should never be equal to another origin.
+/// This has the implication that it's unneccesary to compare them to
+/// any other and we might as well return parse error and handle that
 /// case separately.
 ///
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub struct Origin {
+    /// Lower-case scheme
     scheme: String,
+    /// Host with all ascii chars lowercased and punycoded
     host: String,
+    /// The explicit port or scheme default port if not explicity set
     port: u16,
 }
 
+/// A Web Origin
 impl Origin {
     /// Parses the given string as an origin.
     /// #Errors
