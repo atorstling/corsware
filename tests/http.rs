@@ -131,7 +131,7 @@ fn preflight_with_allowed_origin_sets_all_headers() {
     assert_eq!(format!("{}", allow_origin), "http://www.a.com:8080");
     let allow_headers = res.headers.get::<AccessControlAllowHeaders>().unwrap();
     assert_eq!(format!("{}", allow_headers),
-               "Content-Type, X-Requested-With");
+               "Authorization, Content-Type, X-Requested-With");
     let allow_methods = res.headers.get::<AccessControlAllowMethods>().unwrap();
     assert_eq!(format!("{}", allow_methods),
                "OPTIONS, GET, POST, PUT, DELETE, HEAD, TRACE, CONNECT, PATCH");

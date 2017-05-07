@@ -87,24 +87,30 @@ pub struct CorsMiddleware {
     pub max_age_seconds: u32,
 }
 
+/// Returns all standard HTTP verbs
+pub fn all_std_methods() -> Vec<Method> {
+    vec![Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch]
+}
+
+/// Returns HTTP Headers commonly set by clients
+pub fn common_req_headers() -> Vec<unicase::UniCase<String>> {
+    vec![UniCase("Authorization".to_owned()),
+         // To allow application/json
+         UniCase("Content-Type".to_owned()),
+         // Set by some js libs
+         UniCase("X-Requested-With".to_owned())]
+}
+
 impl CorsMiddleware {
     /// New middleware with reasonable defaults.
     /// Allows any origin, all methods, the headers 'Content-Type' and 'X-Requested-With',
     /// does not allow credentials and has a MaxAge of 60 minutes.
     pub fn new() -> CorsMiddleware {
-        let allowed_methods: Vec<Method> = vec![Options, Get, Post, Put, Delete, Head, Trace,
-                                                Connect, Patch];
-        let allowed_headers: Vec<unicase::UniCase<String>> =
-            vec![// To allow application/json
-                 UniCase("Content-Type".to_owned()),
-                 // Set by some js libs
-                 UniCase("X-Requested-With".to_owned())];
-        let exposed_headers: Vec<UniCase<String>> = Vec::new();
         CorsMiddleware {
             allowed_origins: AllowedOrigins::Any { prefer_wildcard: false },
-            allowed_methods: allowed_methods,
-            allowed_headers: allowed_headers,
-            exposed_headers: exposed_headers,
+            allowed_methods: all_std_methods(),
+            allowed_headers: common_req_headers(),
+            exposed_headers: vec![],
             allow_credentials: false,
             max_age_seconds: 60 * 60,
         }
