@@ -29,9 +29,13 @@ struct AutoServer {
     port: u16,
 }
 
+fn cors() -> CorsMiddleware {
+    CorsMiddleware::permissive_no_auth()
+}
+
 impl AutoServer {
     pub fn new() -> AutoServer {
-        AutoServer::with_cors(CorsMiddleware::new())
+        AutoServer::with_cors(cors())
     }
 
     pub fn with_cors(cors: CorsMiddleware) -> AutoServer {
@@ -141,7 +145,7 @@ fn preflight_with_allowed_origin_sets_all_headers() {
 
 #[test]
 fn disallowing_credentials_unsets_allow_credentials_header_in_response() {
-    let c = CorsMiddleware { allow_credentials: false, ..CorsMiddleware::new() };
+    let c = CorsMiddleware { allow_credentials: false, ..cors() };
     let server = AutoServer::with_cors(c);
     let client = Client::new();
     let mut headers = Headers::new();
@@ -157,7 +161,7 @@ fn disallowing_credentials_unsets_allow_credentials_header_in_response() {
 
 #[test]
 fn allowing_credentials_sets_allow_credentials_header_in_response() {
-    let c = CorsMiddleware { allow_credentials: true, ..CorsMiddleware::new() };
+    let c = CorsMiddleware { allow_credentials: true, ..cors() };
     let server = AutoServer::with_cors(c);
     let client = Client::new();
     let mut headers = Headers::new();
@@ -173,7 +177,7 @@ fn allowing_credentials_sets_allow_credentials_header_in_response() {
 
 #[test]
 fn preflight_with_disallowed_origin_is_error() {
-    let mut cors = CorsMiddleware::new();
+    let mut cors = cors();
     let origins: HashSet<Origin> =
         vec![Origin::parse("http://www.a.com").unwrap()].into_iter().collect();
     cors.allowed_origins = AllowedOrigins::Specific(origins);
@@ -207,7 +211,7 @@ fn preflight_with_null_origin_is_not_allowed() {
     //
     // Seems as if Iron refuses to parse the Origin header if its null as is:
     // http://azerupi.github.io/mdBook/iron/headers/struct.Origin.html
-    let mut cors = CorsMiddleware::new();
+    let mut cors = cors();
     let origins: HashSet<Origin> =
         vec![Origin::parse("http://www.a.com").unwrap()].into_iter().collect();
     cors.allowed_origins = AllowedOrigins::Specific(origins);
@@ -227,7 +231,7 @@ fn preflight_with_null_origin_is_not_allowed() {
 
 #[test]
 fn preflight_with_disallowed_header_is_error() {
-    let mut cors = CorsMiddleware::new();
+    let mut cors = cors();
     cors.allowed_headers = vec![];
     let server = AutoServer::with_cors(cors);
     let client = Client::new();
@@ -267,7 +271,7 @@ fn options_without_method_is_normal_request() {
 fn preflight_with_disallowed_method_is_error() {
     // A requestion with options and OriginHeader but without
     // method is considers non-preflight
-    let cm = CorsMiddleware::new();
+    let cm = cors();
     let cm2 = CorsMiddleware { allowed_methods: vec![], ..cm };
     let server = AutoServer::with_cors(cm2);
     let client = Client::new();
@@ -287,7 +291,7 @@ fn preflight_with_disallowed_method_is_error() {
 
 #[test]
 fn normal_request_sets_right_headers() {
-    let cm1 = CorsMiddleware::new();
+    let cm1 = cors();
     let cm = CorsMiddleware {
         exposed_headers: vec![UniCase("X-ExposeMe".to_owned())],
         allow_credentials: true,
@@ -341,7 +345,7 @@ fn handler_ergonomy() {
     router.get("", get_handler, "get_a");
     router.put("", put_handler, "put_a");
 
-    let cors = CorsMiddleware::new();
+    let cors = cors();
     let chain = cors.decorate(router);
 
     let server = AutoServer::with_handler(chain);

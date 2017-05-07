@@ -105,7 +105,7 @@ impl CorsMiddleware {
     /// New middleware with reasonable defaults.
     /// Allows any origin, all methods, the headers 'Content-Type' and 'X-Requested-With',
     /// does not allow credentials and has a MaxAge of 60 minutes.
-    pub fn new() -> CorsMiddleware {
+    pub fn permissive_no_auth() -> CorsMiddleware {
         CorsMiddleware {
             allowed_origins: AllowedOrigins::Any { prefer_wildcard: false },
             allowed_methods: all_std_methods(),
