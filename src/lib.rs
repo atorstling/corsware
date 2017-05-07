@@ -108,7 +108,7 @@ pub fn all_std_methods() -> Vec<Method> {
     vec![Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch]
 }
 
-/// Returns HTTP Headers commonly set by clients
+/// Returns HTTP Headers commonly set by clients 
 pub fn common_req_headers() -> Vec<unicase::UniCase<String>> {
     vec![UniCase("Authorization".to_owned()),
          // To allow application/json
@@ -119,9 +119,13 @@ pub fn common_req_headers() -> Vec<unicase::UniCase<String>> {
 
 impl CorsMiddleware {
     /// New middleware with reasonable defaults.
-    /// Allows any origin, all methods, the headers 'Content-Type' and 'X-Requested-With',
-    /// does not allow credentials and has a MaxAge of 60 minutes.
-    pub fn permissive_no_auth() -> CorsMiddleware {
+    /// Allows any origin
+    /// Allows all standard HTTP methods
+    /// Allows common request headers (as defined by `common_req_headers()`
+    /// Does not expose any headers 
+    /// Does not allow credentials
+    /// Set MaxAge to 60 minutes.
+    pub fn permissive() -> CorsMiddleware {
         CorsMiddleware {
             allowed_origins: AllowedOrigins::Any { prefer_wildcard: false },
             allowed_methods: all_std_methods(),

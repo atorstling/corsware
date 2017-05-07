@@ -30,7 +30,7 @@ struct AutoServer {
 }
 
 fn cors() -> CorsMiddleware {
-    CorsMiddleware::permissive_no_auth()
+    CorsMiddleware::permissive()
 }
 
 impl AutoServer {
