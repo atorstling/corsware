@@ -78,12 +78,28 @@ impl AllowedOrigins {
 }
 
 /// An iron middleware which implements CORS
+///
+/// Note: Not using `Vec<Header>` to represent
+/// headers since the iron `Header`
+/// type is representing a `Key=Value` pair and not just the key. 
+/// In other words, the Header type represents an instance of
+/// a HTTP header. What we need here is something representing the
+/// type of header. Since the Header trait defines a a method
+/// `fn header_name() -> &'static str`, we conclude that Iron uses
+/// strings to represent this.
 pub struct CorsMiddleware {
+    /// The origins which are allowed to access this resource
     pub allowed_origins: AllowedOrigins,
+    /// The methods allowed to perform on this resource
     pub allowed_methods: Vec<Method>,
+    /// The headers allowed to send to this resource
     pub allowed_headers: Vec<UniCase<String>>,
+    /// The headers allowed to read from the response from this resource
     pub exposed_headers: Vec<UniCase<String>>,
+    /// Whether to allow clients to send cookies to this resource or not
     pub allow_credentials: bool,
+    /// Defines the max cache lifetime for operations allowed on this
+    /// resource
     pub max_age_seconds: u32,
 }
 
