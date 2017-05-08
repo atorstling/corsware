@@ -45,7 +45,7 @@ impl AllowedOrigins {
     /// We're not using the iron Origin header to construct an Origin directly, since
     /// we are dependent on url.port_or_known_default() to get the default port. This
     /// method is only available after parsing the Origin header to an URL.
-    fn allowed_for(&self, origin_string: &String, allow_credentials: bool) -> Option<String> {
+    fn allowed_for(&self, origin_string: &str, allow_credentials: bool) -> Option<String> {
         match Origin::parse(origin_string) {
             Err(_) => None,
             Ok(origin) => {
@@ -53,19 +53,19 @@ impl AllowedOrigins {
                     &AllowedOrigins::Any { prefer_wildcard } => {
                         if allow_credentials {
                             // Allow credentials does not permit using wildcard
-                            Some(origin_string.clone())
+                            Some(origin_string.to_owned())
                         } else {
                             // Use wildcard if preferred
                             Some(if prefer_wildcard {
                                      "*".to_owned()
                                  } else {
-                                     origin_string.clone()
+                                     origin_string.to_owned()
                                  })
                         }
                     }
                     &AllowedOrigins::Specific(ref allowed) => {
                         if allowed.contains(&origin) {
-                            Some(origin_string.clone())
+                            Some(origin_string.to_owned())
                         } else {
                             None
                         }
@@ -153,7 +153,7 @@ impl CorsMiddleware {
     /// Handle a preflight request
     fn handle_preflight(&self, req: &mut Request, _: &Handler) -> IronResult<Response> {
         // Successful preflight status code is NoContent
-        let mut res = Response::with((status::NoContent));
+        let mut res = Response::with(status::NoContent);
 
         // - Preflight request
         // - 1.If the Origin header is not present terminate this set of steps. The request is
