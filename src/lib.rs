@@ -49,8 +49,8 @@ impl AllowedOrigins {
         match Origin::parse(origin_string) {
             Err(_) => None,
             Ok(origin) => {
-                match self {
-                    &AllowedOrigins::Any { prefer_wildcard } => {
+                match *self {
+                    AllowedOrigins::Any { prefer_wildcard } => {
                         if allow_credentials {
                             // Allow credentials does not permit using wildcard
                             Some(origin_string.to_owned())
@@ -63,7 +63,7 @@ impl AllowedOrigins {
                                  })
                         }
                     }
-                    &AllowedOrigins::Specific(ref allowed) => {
+                    AllowedOrigins::Specific(ref allowed) => {
                         if allowed.contains(&origin) {
                             Some(origin_string.to_owned())
                         } else {
