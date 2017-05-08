@@ -118,13 +118,13 @@ pub fn common_req_headers() -> Vec<unicase::UniCase<String>> {
 }
 
 impl CorsMiddleware {
-    /// New middleware with reasonable defaults.
-    /// Allows any origin
-    /// Allows all standard HTTP methods
-    /// Allows common request headers (as defined by `common_req_headers()`
-    /// Does not expose any headers 
-    /// Does not allow credentials
-    /// Set MaxAge to 60 minutes.
+    /// New middleware with sensible permissive settings.
+    /// Allows any origin.
+    /// Allows all standard HTTP methods.
+    /// Allows common request headers (as defined by `common_req_headers()`.
+    /// Does not expose any headers.
+    /// Does not allow credentials.
+    /// Sets MaxAge to 60 minutes.
     pub fn permissive() -> CorsMiddleware {
         CorsMiddleware {
             allowed_origins: AllowedOrigins::Any { prefer_wildcard: false },
