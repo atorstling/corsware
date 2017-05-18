@@ -81,7 +81,7 @@ impl AllowedOrigins {
 ///
 /// Note: Not using `Vec<Header>` to represent
 /// headers since the iron `Header`
-/// type is representing a `Key=Value` pair and not just the key. 
+/// type is representing a `Key=Value` pair and not just the key.
 /// In other words, the Header type represents an instance of
 /// a HTTP header. What we need here is something representing the
 /// type of header. Since the Header trait defines a a method
@@ -108,7 +108,7 @@ pub fn all_std_methods() -> Vec<Method> {
     vec![Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch]
 }
 
-/// Returns HTTP Headers commonly set by clients 
+/// Returns HTTP Headers commonly set by clients
 pub fn common_req_headers() -> Vec<unicase::UniCase<String>> {
     vec![UniCase("Authorization".to_owned()),
          // To allow application/json

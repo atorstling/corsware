@@ -17,14 +17,18 @@ use std::ascii::AsciiExt;
 /// case separately.
 ///
 #[derive(PartialEq, Eq, Hash, Debug)]
-pub struct Origin {
-    /// Lower-case scheme
-    scheme: String,
-    /// Host with all ascii chars lowercased and punycoded
-    host: String,
-    /// The explicit port or scheme default port if not explicity set
-    port: u16,
+pub enum Origin {
+    Null,
+    Specific {
+        /// Lower-case scheme
+        scheme: String,
+        /// Host with all ascii chars lowercased and punycoded
+        host: String,
+        /// The explicit port or scheme default port if not explicity set
+        port: u16,
+    },
 }
+
 
 /// A Web Origin
 impl Origin {
@@ -32,6 +36,8 @@ impl Origin {
     /// #Errors
     /// Errors are returned if
     ///
+    /// - The argument cannot be parsed as "null" 
+    /// OR
     /// * The argument cannot be parsed as an URL
     /// * There's no host in the URL
     /// * The URL scheme is not supported by the URL parser (rust-url)
@@ -43,8 +49,17 @@ impl Origin {
     /// let o1 = Origin::parse("http://exämple.com");
     /// let o2 = Origin::parse("hTtP://user:password@eXämpLe.cOm:80/a/path.html");
     /// assert_eq!(o1, o2);
+    /// let o3 = Origin::parse("null");
+    /// assert_eq!(o3, Ok(Origin::Null));
     /// ```
     pub fn parse(s: &str) -> Result<Origin, String> {
+        match s {
+            "null" => Ok(Origin::Null),
+            _ => Origin::parse_url(s),
+        }
+    }
+
+    pub fn parse_url(s: &str) -> Result<Origin, String> {
         match Url::parse(s) {
             Err(_) => Err(format!("Could not be parsed as URL: '{}'", s)),
             Ok(url) => {
@@ -93,7 +108,7 @@ impl Origin {
                             None => Err(format!("Unsupported URL scheme	'{}'", uri_scheme)),
                             Some(port) => {
                                 //   7.  Return the triple (uri-scheme, uri-host, uri-port).
-                                Ok(Origin {
+                                Ok(Origin::Specific {
                                        scheme: uri_scheme,
                                        host: uri_host,
                                        port,
@@ -113,7 +128,10 @@ impl Origin {
     /// assert_eq!(Origin::parse("hTtP://a.com").unwrap().scheme(), &"http".to_owned());
     /// ```
     pub fn scheme(&self) -> &String {
-        &self.scheme
+        match self {
+            &Origin::Null => panic!("Null Origin has no scheme"),
+            &Origin::Specific { ref scheme, .. } => &scheme,
+        }
     }
 
     /// Returns the host of the origin in ascii lower case.
@@ -123,7 +141,10 @@ impl Origin {
     /// assert_eq!(Origin::parse("ftp://Aö.coM").unwrap().host(), &"xn--a-1ga.com".to_owned());
     /// ```
     pub fn host(&self) -> &String {
-        &self.host
+        match self {
+            &Origin::Null => panic!("Null Origin has no host"),
+            &Origin::Specific { ref host, .. } => &host,
+        }
     }
 
     /// Returns the port of the origin. Will return the default
@@ -134,7 +155,10 @@ impl Origin {
     /// assert_eq!(Origin::parse("ftp://a.com").unwrap().port(), 21);
     /// ```
     pub fn port(&self) -> u16 {
-        self.port
+        match self {
+            &Origin::Null => panic!("Null Origin has no port"),
+            &Origin::Specific { ref port, .. } => *port,
+        }
     }
 }
 
