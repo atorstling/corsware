@@ -226,7 +226,7 @@ fn preflight_with_null_origin_is_not_allowed() {
         .unwrap();
     assert_eq!(res.status, status::BadRequest);
     assert_eq!(to_string(&mut res),
-               "Preflight request without Origin header");
+               "Preflight request requesting disallowed origin 'null'");
 }
 
 #[test]

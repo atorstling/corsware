@@ -36,7 +36,7 @@ impl Origin {
     /// #Errors
     /// Errors are returned if
     ///
-    /// - The argument cannot be parsed as "null" 
+    /// - The argument cannot be parsed as "null"
     /// OR
     /// * The argument cannot be parsed as an URL
     /// * There's no host in the URL

@@ -1,5 +1,6 @@
 extern crate iron;
 extern crate unicase;
+#[macro_use]
 extern crate hyper;
 
 use unicase::UniCase;
@@ -7,7 +8,7 @@ use iron::prelude::*;
 use iron::method::Method;
 use iron::method::Method::*;
 use iron::status;
-use iron::headers::Origin as OriginHeader;
+//use iron::headers::Origin as OriginHeader;
 use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
                     AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlMaxAge,
                     AccessControlAllowMethods, AccessControlAllowCredentials,
@@ -18,6 +19,10 @@ use std::iter::FromIterator;
 pub use origin::Origin;
 
 mod origin;
+
+// Use custom Origin header to allow for null Origin, which the standard
+// iron header does not allow
+header! { (OriginHeader, "Origin") => [String] }
 
 /// Specifies which Origins are allowed to access this resource
 pub enum AllowedOrigins {
@@ -49,25 +54,30 @@ impl AllowedOrigins {
         match Origin::parse(origin_string) {
             Err(_) => None,
             Ok(origin) => {
-                match *self {
-                    AllowedOrigins::Any { prefer_wildcard } => {
-                        if allow_credentials {
-                            // Allow credentials does not permit using wildcard
-                            Some(origin_string.to_owned())
-                        } else {
-                            // Use wildcard if preferred
-                            Some(if prefer_wildcard {
-                                     "*".to_owned()
-                                 } else {
-                                     origin_string.to_owned()
-                                 })
-                        }
-                    }
-                    AllowedOrigins::Specific(ref allowed) => {
-                        if allowed.contains(&origin) {
-                            Some(origin_string.to_owned())
-                        } else {
-                            None
+                match origin {
+                    Origin::Null => None,
+                    Origin::Specific { .. } => {
+                        match *self {
+                            AllowedOrigins::Any { prefer_wildcard } => {
+                                if allow_credentials {
+                                    // Allow credentials does not permit using wildcard
+                                    Some(origin_string.to_owned())
+                                } else {
+                                    // Use wildcard if preferred
+                                    Some(if prefer_wildcard {
+                                             "*".to_owned()
+                                         } else {
+                                             origin_string.to_owned()
+                                         })
+                                }
+                            }
+                            AllowedOrigins::Specific(ref allowed) => {
+                                if allowed.contains(&origin) {
+                                    Some(origin_string.to_owned())
+                                } else {
+                                    None
+                                }
+                            }
                         }
                     }
                 }
