@@ -230,9 +230,9 @@ fn preflight_with_null_origin_can_be_allowed() {
     let cm = cors();
     let cors = CorsMiddleware {
         allowed_origins: AllowedOrigins::Any {
-            prefer_wildcard: true,
             allow_null: true,
         },
+        prefer_wildcard: true,
         ..cm
     };
     let server = AutoServer::with_cors(cors);

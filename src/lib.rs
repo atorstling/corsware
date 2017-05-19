@@ -28,11 +28,6 @@ header! { (OriginHeader, "Origin") => [String] }
 pub enum AllowedOrigins {
     /// Any Origin is allowed.
     Any {
-        /// If set, wildcard ('*') will be used as value
-        /// for AccessControlAllowOrigin if possible. If not set,
-        /// echoing the incoming Origin will be preferred.
-        /// If credentials are allowed, echoing will always be used.
-        prefer_wildcard: bool,
         /// Allowing a null origin is a separate setting, since it's
         /// risky to trust sources with a null Origin, see
         /// https://tools.ietf.org/id/draft-abarth-origin-03.html#rfc.section.6
@@ -72,13 +67,15 @@ impl AllowedOrigins {
     /// We're not using the iron Origin header to construct an Origin directly, since
     /// we are dependent on url.port_or_known_default() to get the default port. This
     /// method is only available after parsing the Origin header to an URL.
-    fn allowed_for(&self, origin_string: &str, allow_credentials: bool) -> Option<String> {
-        println!("origin_string: {}", origin_string);
+    fn allowed_for(&self, 
+                   origin_string: &str, 
+                   allow_credentials: bool,
+                   prefer_wildcard: bool) -> Option<String> {
         match Origin::parse_allow_null(origin_string) {
             Err(_) => None,
             Ok(origin) => {
                 match *self {
-                    AllowedOrigins::Any { prefer_wildcard, allow_null } => {
+                    AllowedOrigins::Any { allow_null } => {
                         // Any origin is allowed, but this does not include Null,
                         // special check for that
                         if origin == Origin::Null && !allow_null {
@@ -89,9 +86,7 @@ impl AllowedOrigins {
                     }
                     AllowedOrigins::Specific(ref allowed) => {
                         if allowed.contains(&origin) {
-                            // TODO: it might make sense to answer with AllowOrigin * even though
-                            // we have a specific list. Flag for this with specific as well?
-                            self.allow(origin_string, false, allow_credentials)
+                            self.allow(origin_string, prefer_wildcard, allow_credentials)
                         } else {
                             None
                         }
@@ -127,6 +122,11 @@ pub struct CorsMiddleware {
     /// Defines the max cache lifetime for operations allowed on this
     /// resource
     pub max_age_seconds: u32,
+        /// If set, wildcard ('*') will be used as value
+        /// for AccessControlAllowOrigin if possible. If not set,
+        /// echoing the incoming Origin will be preferred.
+        /// If credentials are allowed, echoing will always be used.
+    pub prefer_wildcard: bool,
 }
 
 /// Returns all standard HTTP verbs
@@ -154,7 +154,6 @@ impl CorsMiddleware {
     pub fn permissive() -> CorsMiddleware {
         CorsMiddleware {
             allowed_origins: AllowedOrigins::Any {
-                prefer_wildcard: false,
                 allow_null: false,
             },
             allowed_methods: all_std_methods(),
@@ -162,6 +161,7 @@ impl CorsMiddleware {
             exposed_headers: vec![],
             allow_credentials: false,
             max_age_seconds: 60 * 60,
+            prefer_wildcard: false,
         }
     }
 
@@ -205,7 +205,9 @@ impl CorsMiddleware {
         //       will not follow redirects.
         //
         let origin_str = origin.to_string();
-        let allowed_origin = self.allowed_origins.allowed_for(&origin_str, self.allow_credentials);
+        let allowed_origin = self.allowed_origins.allowed_for(&origin_str, 
+                                                              self.allow_credentials,
+                                                              self.prefer_wildcard);
         if allowed_origin.is_none() {
             let resp = Response::with((status::BadRequest,
                                        format!("Preflight request requesting \
@@ -347,7 +349,9 @@ impl CorsMiddleware {
             .unwrap()
             .clone();
         let origin_str = origin.to_string();
-        let allowed_origin = self.allowed_origins.allowed_for(&origin_str, self.allow_credentials);
+        let allowed_origin = self.allowed_origins.allowed_for(&origin_str, 
+                                                              self.allow_credentials,
+                                                              self.prefer_wildcard);
         if allowed_origin.is_none() {
             let resp = Response::with((status::BadRequest,
                                        format!("Normal request requesting \
