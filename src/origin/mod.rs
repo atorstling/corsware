@@ -16,7 +16,7 @@ use std::ascii::AsciiExt;
 /// any other and we might as well return parse error and handle that
 /// case separately.
 ///
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub enum Origin {
     Null,
     Triple {

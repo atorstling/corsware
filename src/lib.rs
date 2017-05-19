@@ -25,6 +25,7 @@ mod origin;
 header! { (OriginHeader, "Origin") => [String] }
 
 /// Specifies which Origins are allowed to access this resource
+#[derive(Clone)]
 pub enum AllowedOrigins {
     /// Any Origin is allowed.
     Any {
@@ -109,6 +110,7 @@ impl AllowedOrigins {
 /// type of header. Since the Header trait defines a a method
 /// `fn header_name() -> &'static str`, we conclude that Iron uses
 /// strings to represent this.
+#[derive(Clone)]
 pub struct CorsMiddleware {
     /// The origins which are allowed to access this resource
     pub allowed_origins: AllowedOrigins,
