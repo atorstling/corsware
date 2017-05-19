@@ -228,7 +228,30 @@ fn preflight_with_null_origin_is_not_allowed_by_default() {
 #[test]
 fn preflight_with_null_origin_can_be_allowed() {
     let cm = cors();
-    let cors = CorsMiddleware { allowed_origins: AllowedOrigins::Any { prefer_wildcard: true, allow_null: true } , ..cm };
+    let cors = CorsMiddleware {
+        allowed_origins: AllowedOrigins::Any {
+            prefer_wildcard: true,
+            allow_null: true,
+        },
+        ..cm
+    };
+    let server = AutoServer::with_cors(cors);
+    let client = Client::new();
+    let mut headers = Headers::new();
+    headers.set(AccessControlRequestMethod(Get));
+    headers.set(NullableOrigin("null".to_owned()));
+    let res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
+        .headers(headers)
+        .send()
+        .unwrap();
+    assert_eq!(res.status, status::NoContent);
+}
+
+#[test]
+fn preflight_with_null_origin_can_be_specifically_allowed() {
+    let origins: HashSet<Origin> = vec![Origin::Null].into_iter().collect();
+    let cm = cors();
+    let cors = CorsMiddleware { allowed_origins: AllowedOrigins::Specific(origins), ..cm };
     let server = AutoServer::with_cors(cors);
     let client = Client::new();
     let mut headers = Headers::new();
