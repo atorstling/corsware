@@ -32,12 +32,11 @@ pub enum Origin {
 
 /// A Web Origin
 impl Origin {
+
     /// Parses the given string as an origin.
     /// #Errors
     /// Errors are returned if
     ///
-    /// - The argument cannot be parsed as "null"
-    /// OR
     /// * The argument cannot be parsed as an URL
     /// * There's no host in the URL
     /// * The URL scheme is not supported by the URL parser (rust-url)
@@ -49,17 +48,8 @@ impl Origin {
     /// let o1 = Origin::parse("http://exämple.com");
     /// let o2 = Origin::parse("hTtP://user:password@eXämpLe.cOm:80/a/path.html");
     /// assert_eq!(o1, o2);
-    /// let o3 = Origin::parse("null");
-    /// assert_eq!(o3, Ok(Origin::Null));
     /// ```
     pub fn parse(s: &str) -> Result<Origin, String> {
-        match s {
-            "null" => Ok(Origin::Null),
-            _ => Origin::parse_url(s),
-        }
-    }
-
-    pub fn parse_url(s: &str) -> Result<Origin, String> {
         match Url::parse(s) {
             Err(_) => Err(format!("Could not be parsed as URL: '{}'", s)),
             Ok(url) => {
@@ -118,6 +108,31 @@ impl Origin {
                     }
                 }
             }
+        }
+    }
+
+    /// Parses the given string as an origin. Allows for
+    /// "null" to be parsed as Origin::Null and should only
+    /// be used in cases where getting Null origin is not a
+    /// security problem. Remember that Null origin should be treated
+    /// as "Origin could not be deduced"
+    ///
+    /// #Examples
+    /// ```
+    /// use iron_cors2::Origin;
+    /// let o1 = Origin::parse_allow_null("null");
+    /// assert_eq!(o1, Ok(Origin::Null));
+    /// let o2 = Origin::parse_allow_null("http://www.a.com");
+    /// assert_eq!(o2, Ok(Origin::Triple { 
+    ///         scheme: "http".to_owned(), 
+    ///         host: "www.a.com".to_owned(), 
+    ///         port: 80u16 
+    ///         }));
+    /// ```
+    pub fn parse_allow_null(s: &str) -> Result<Origin, String> {
+        match s {
+            "null" => Ok(Origin::Null),
+            _ => Origin::parse(s),
         }
     }
 

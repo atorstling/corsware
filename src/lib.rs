@@ -74,7 +74,7 @@ impl AllowedOrigins {
     /// method is only available after parsing the Origin header to an URL.
     fn allowed_for(&self, origin_string: &str, allow_credentials: bool) -> Option<String> {
         println!("origin_string: {}", origin_string);
-        match Origin::parse(origin_string) {
+        match Origin::parse_allow_null(origin_string) {
             Err(_) => None,
             Ok(origin) => {
                 match *self {
