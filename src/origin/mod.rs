@@ -32,7 +32,6 @@ pub enum Origin {
 
 /// A Web Origin
 impl Origin {
-
     /// Parses the given string as an origin.
     /// #Errors
     /// Errors are returned if
@@ -123,10 +122,10 @@ impl Origin {
     /// let o1 = Origin::parse_allow_null("null");
     /// assert_eq!(o1, Ok(Origin::Null));
     /// let o2 = Origin::parse_allow_null("http://www.a.com");
-    /// assert_eq!(o2, Ok(Origin::Triple { 
-    ///         scheme: "http".to_owned(), 
-    ///         host: "www.a.com".to_owned(), 
-    ///         port: 80u16 
+    /// assert_eq!(o2, Ok(Origin::Triple {
+    ///         scheme: "http".to_owned(),
+    ///         host: "www.a.com".to_owned(),
+    ///         port: 80u16
     ///         }));
     /// ```
     pub fn parse_allow_null(s: &str) -> Result<Origin, String> {

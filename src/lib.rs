@@ -67,10 +67,11 @@ impl AllowedOrigins {
     /// We're not using the iron Origin header to construct an Origin directly, since
     /// we are dependent on url.port_or_known_default() to get the default port. This
     /// method is only available after parsing the Origin header to an URL.
-    fn allowed_for(&self, 
-                   origin_string: &str, 
+    fn allowed_for(&self,
+                   origin_string: &str,
                    allow_credentials: bool,
-                   prefer_wildcard: bool) -> Option<String> {
+                   prefer_wildcard: bool)
+                   -> Option<String> {
         match Origin::parse_allow_null(origin_string) {
             Err(_) => None,
             Ok(origin) => {
@@ -122,10 +123,10 @@ pub struct CorsMiddleware {
     /// Defines the max cache lifetime for operations allowed on this
     /// resource
     pub max_age_seconds: u32,
-        /// If set, wildcard ('*') will be used as value
-        /// for AccessControlAllowOrigin if possible. If not set,
-        /// echoing the incoming Origin will be preferred.
-        /// If credentials are allowed, echoing will always be used.
+    /// If set, wildcard ('*') will be used as value
+    /// for AccessControlAllowOrigin if possible. If not set,
+    /// echoing the incoming Origin will be preferred.
+    /// If credentials are allowed, echoing will always be used.
     pub prefer_wildcard: bool,
 }
 
@@ -153,9 +154,7 @@ impl CorsMiddleware {
     /// Sets MaxAge to 60 minutes.
     pub fn permissive() -> CorsMiddleware {
         CorsMiddleware {
-            allowed_origins: AllowedOrigins::Any {
-                allow_null: false,
-            },
+            allowed_origins: AllowedOrigins::Any { allow_null: false },
             allowed_methods: all_std_methods(),
             allowed_headers: common_req_headers(),
             exposed_headers: vec![],
@@ -205,9 +204,10 @@ impl CorsMiddleware {
         //       will not follow redirects.
         //
         let origin_str = origin.to_string();
-        let allowed_origin = self.allowed_origins.allowed_for(&origin_str, 
-                                                              self.allow_credentials,
-                                                              self.prefer_wildcard);
+        let allowed_origin =
+            self.allowed_origins.allowed_for(&origin_str,
+                                             self.allow_credentials,
+                                             self.prefer_wildcard);
         if allowed_origin.is_none() {
             let resp = Response::with((status::BadRequest,
                                        format!("Preflight request requesting \
@@ -349,9 +349,10 @@ impl CorsMiddleware {
             .unwrap()
             .clone();
         let origin_str = origin.to_string();
-        let allowed_origin = self.allowed_origins.allowed_for(&origin_str, 
-                                                              self.allow_credentials,
-                                                              self.prefer_wildcard);
+        let allowed_origin =
+            self.allowed_origins.allowed_for(&origin_str,
+                                             self.allow_credentials,
+                                             self.prefer_wildcard);
         if allowed_origin.is_none() {
             let resp = Response::with((status::BadRequest,
                                        format!("Normal request requesting \

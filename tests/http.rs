@@ -229,9 +229,7 @@ fn preflight_with_null_origin_is_not_allowed_by_default() {
 fn preflight_with_null_origin_can_be_allowed() {
     let cm = cors();
     let cors = CorsMiddleware {
-        allowed_origins: AllowedOrigins::Any {
-            allow_null: true,
-        },
+        allowed_origins: AllowedOrigins::Any { allow_null: true },
         prefer_wildcard: true,
         ..cm
     };
