@@ -19,7 +19,7 @@ use std::ascii::AsciiExt;
 #[derive(PartialEq, Eq, Hash, Debug)]
 pub enum Origin {
     Null,
-    Specific {
+    Triple {
         /// Lower-case scheme
         scheme: String,
         /// Host with all ascii chars lowercased and punycoded
@@ -36,7 +36,7 @@ impl Origin {
     /// #Errors
     /// Errors are returned if
     ///
-    /// - The argument cannot be parsed as "null"
+    /// - The argument cannot be parsed as "null" 
     /// OR
     /// * The argument cannot be parsed as an URL
     /// * There's no host in the URL
@@ -108,7 +108,7 @@ impl Origin {
                             None => Err(format!("Unsupported URL scheme	'{}'", uri_scheme)),
                             Some(port) => {
                                 //   7.  Return the triple (uri-scheme, uri-host, uri-port).
-                                Ok(Origin::Specific {
+                                Ok(Origin::Triple {
                                        scheme: uri_scheme,
                                        host: uri_host,
                                        port,
@@ -130,7 +130,7 @@ impl Origin {
     pub fn scheme(&self) -> &String {
         match self {
             &Origin::Null => panic!("Null Origin has no scheme"),
-            &Origin::Specific { ref scheme, .. } => &scheme,
+            &Origin::Triple { ref scheme, .. } => &scheme,
         }
     }
 
@@ -143,7 +143,7 @@ impl Origin {
     pub fn host(&self) -> &String {
         match self {
             &Origin::Null => panic!("Null Origin has no host"),
-            &Origin::Specific { ref host, .. } => &host,
+            &Origin::Triple { ref host, .. } => &host,
         }
     }
 
@@ -157,7 +157,7 @@ impl Origin {
     pub fn port(&self) -> u16 {
         match self {
             &Origin::Null => panic!("Null Origin has no port"),
-            &Origin::Specific { ref port, .. } => *port,
+            &Origin::Triple { ref port, .. } => *port,
         }
     }
 }

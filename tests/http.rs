@@ -198,7 +198,7 @@ fn preflight_with_disallowed_origin_is_error() {
 header! { (NullableOrigin, "Origin") => [String] }
 
 #[test]
-fn preflight_with_null_origin_is_not_allowed() {
+fn preflight_with_null_origin_is_not_allowed_by_default() {
     // According to https://tools.ietf.org/id/draft-abarth-origin-03.html#rfc.section.6
     // you shouldn't be able to whitelist a "null" Origin.
     //
@@ -211,11 +211,7 @@ fn preflight_with_null_origin_is_not_allowed() {
     //
     // Seems as if Iron refuses to parse the Origin header if its null as is:
     // http://azerupi.github.io/mdBook/iron/headers/struct.Origin.html
-    let mut cors = cors();
-    let origins: HashSet<Origin> =
-        vec![Origin::parse("http://www.a.com").unwrap()].into_iter().collect();
-    cors.allowed_origins = AllowedOrigins::Specific(origins);
-    let server = AutoServer::with_cors(cors);
+    let server = AutoServer::new();
     let client = Client::new();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
@@ -227,6 +223,22 @@ fn preflight_with_null_origin_is_not_allowed() {
     assert_eq!(res.status, status::BadRequest);
     assert_eq!(to_string(&mut res),
                "Preflight request requesting disallowed origin 'null'");
+}
+
+#[test]
+fn preflight_with_null_origin_can_be_allowed() {
+    let cm = cors();
+    let cors = CorsMiddleware { allowed_origins: AllowedOrigins::Any { prefer_wildcard: true, allow_null: true } , ..cm };
+    let server = AutoServer::with_cors(cors);
+    let client = Client::new();
+    let mut headers = Headers::new();
+    headers.set(AccessControlRequestMethod(Get));
+    headers.set(NullableOrigin("null".to_owned()));
+    let res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
+        .headers(headers)
+        .send()
+        .unwrap();
+    assert_eq!(res.status, status::NoContent);
 }
 
 #[test]

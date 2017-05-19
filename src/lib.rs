@@ -33,15 +33,33 @@ pub enum AllowedOrigins {
         /// echoing the incoming Origin will be preferred.
         /// If credentials are allowed, echoing will always be used.
         prefer_wildcard: bool,
+        /// Allowing a null origin is a separate setting, since it's
+        /// risky to trust sources with a null Origin, see
+        /// https://tools.ietf.org/id/draft-abarth-origin-03.html#rfc.section.6
+        /// https://w3c.github.io/webappsec-cors-for-developers/
+        allow_null: bool,
     },
-    /// Allow a specific set of origins. Allowing for null origins is
-    /// not supported. Partly since the Iron cannot parse a null Origin header,
-    /// but also due to it being considered bad practice:
-    /// https://w3c.github.io/webappsec-cors-for-developers/
+    /// Allow a specific set of origins. Remember that allowing
+    /// for a null header is risky.
     Specific(HashSet<Origin>),
 }
 
 impl AllowedOrigins {
+    fn allow(&self, origin_string: &str, prefer_wildcard: bool, allow_credentials: bool) -> Option<String> {
+        {
+            if allow_credentials {
+                // Allow credentials does not permit using wildcard
+                Some(origin_string.to_owned())
+            } else {
+                // Use wildcard if preferred
+                Some(if prefer_wildcard {
+                         "*".to_owned()
+                     } else {
+                         origin_string.to_owned()
+                     })
+            }
+        }
+    }
     /// Returns the value of AccessControlAllowOrigin
     /// given the specified Origin header in the request. The allow_credentials
     /// flag is supplied since AccessControlAllowOrigin * is forbidden when credentials
@@ -51,33 +69,40 @@ impl AllowedOrigins {
     /// we are dependent on url.port_or_known_default() to get the default port. This
     /// method is only available after parsing the Origin header to an URL.
     fn allowed_for(&self, origin_string: &str, allow_credentials: bool) -> Option<String> {
+            println!("origin_string: {}", origin_string);
         match Origin::parse(origin_string) {
-            Err(_) => None,
+            Err(_) => { 
+                    println!("err, forbidding");     
+                    None 
+            },
             Ok(origin) => {
-                match origin {
-                    Origin::Null => None,
-                    Origin::Specific { .. } => {
-                        match *self {
-                            AllowedOrigins::Any { prefer_wildcard } => {
-                                if allow_credentials {
-                                    // Allow credentials does not permit using wildcard
-                                    Some(origin_string.to_owned())
-                                } else {
-                                    // Use wildcard if preferred
-                                    Some(if prefer_wildcard {
-                                             "*".to_owned()
-                                         } else {
-                                             origin_string.to_owned()
-                                         })
-                                }
-                            }
-                            AllowedOrigins::Specific(ref allowed) => {
-                                if allowed.contains(&origin) {
-                                    Some(origin_string.to_owned())
+                    println!("got origin {:?}", origin);     
+                match *self {
+                    AllowedOrigins::Any { prefer_wildcard, allow_null } => {
+                        println!("allowing any");
+                        match origin {
+                            Origin::Null => {
+                                println!("allowed for {}, allow_null: {}", origin_string, allow_null);
+                                if allow_null {
+                                    self.allow(origin_string, prefer_wildcard, allow_credentials)
                                 } else {
                                     None
                                 }
                             }
+                            Origin::Triple { .. } =>  {
+                                println!("specific"); 
+                                self.allow(origin_string, prefer_wildcard, allow_credentials)
+                            }
+                        }
+                    }
+                    AllowedOrigins::Specific(ref allowed) => {
+                        println!("allowing specific");
+                        if allowed.contains(&origin) {
+                            // It might make sense to answer with AllowOrigin * even though
+                            // we have a specific list
+                            self.allow(origin_string, false, allow_credentials)
+                        } else {
+                            None
                         }
                     }
                 }
@@ -137,7 +162,10 @@ impl CorsMiddleware {
     /// Sets MaxAge to 60 minutes.
     pub fn permissive() -> CorsMiddleware {
         CorsMiddleware {
-            allowed_origins: AllowedOrigins::Any { prefer_wildcard: false },
+            allowed_origins: AllowedOrigins::Any { 
+                prefer_wildcard: false,
+                allow_null: false
+            },
             allowed_methods: all_std_methods(),
             allowed_headers: common_req_headers(),
             exposed_headers: vec![],
