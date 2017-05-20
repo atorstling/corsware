@@ -1,5 +1,5 @@
 [package]
-name = "iron-cors2"
+name = "corsware"
 version = "0.1.0"
 authors = ["Alexander Torstling <alexander@torstling.com>"]
 

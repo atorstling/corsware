@@ -1,4 +1,4 @@
-extern crate iron_cors2;
+extern crate corsware;
 extern crate router;
 extern crate iron;
 extern crate unicase;
@@ -19,7 +19,7 @@ use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
                     AccessControlAllowCredentials, AccessControlExposeHeaders, AccessControlMaxAge};
 use iron::method::Method::*;
 use iron::middleware::Handler;
-use iron_cors2::{CorsMiddleware, AllowedOrigins, Origin};
+use corsware::{CorsMiddleware, AllowedOrigins, Origin};
 use std::str::FromStr;
 use std::collections::HashSet;
 use unicase::UniCase;
