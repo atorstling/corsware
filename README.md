@@ -1,6 +1,6 @@
 # Corsware
 
-Corsware is yet another implementation of the [CORS Specification][CORS Spec] for [Iron](Iron). The ambition of this implementation is to make a more or less complete implementation following the spec as closely as possible. This means that it supports preflight request detection, normal request decoration, allowing credentials, origins, methods and headers, exposing headers, handling null Origins and setting Max-Age.
+Corsware is yet another implementation of the [CORS Specification][CORS Spec] for [Iron](Iron). The ambition of this implementation is to make a more or less complete implementation following the spec as closely as possible. This means supporting preflight request detection, normal request decoration, allowing credentials, origins, methods and headers, exposing headers, handling null Origins and setting Max-Age.
 
 The middleware itself is simply a standard Iron `AroundMiddleware` and contains no special routing logic.
 
