@@ -9,6 +9,7 @@ readme = "README.md"
 keywords = ["iron", "cors", "middleware", "cross-origin"]
 categories = ["web-programming::http-server"]
 license = "MIT"
+exclude = [ "docs/**" ]
 
 [badges]
 travis-ci = { repository = "atorstling/corsware" }
