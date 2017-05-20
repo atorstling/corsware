@@ -110,6 +110,53 @@ impl AllowedOrigins {
 /// type of header. Since the Header trait defines a a method
 /// `fn header_name() -> &'static str`, we conclude that Iron uses
 /// strings to represent this.
+///
+/// # Simple Example
+/// ```
+/// extern crate iron;
+/// extern crate corsware;
+/// use corsware::CorsMiddleware;
+/// use iron::prelude::*;
+/// use iron::status;
+///
+/// fn main() {
+///   let handler = |_: &mut Request| {
+///       Ok(Response::with((status::Ok, "Hello world!")))
+///   };
+///   let mut chain = Chain::new(handler);
+///   chain.link_around(CorsMiddleware::permissive());
+///   let mut listening = Iron::new(chain).http("localhost:0").unwrap();
+///   listening.close().unwrap();
+/// }
+/// ```
+/// # A More Elaborate Example
+/// ```
+/// extern crate iron;
+/// extern crate corsware;
+/// use corsware::{CorsMiddleware, AllowedOrigins, UniCase};
+/// use iron::method::Method::{Get,Post};
+/// use iron::prelude::*;
+/// use iron::status;
+///
+/// fn main() {
+///   let handler = |_: &mut Request| {
+///       Ok(Response::with((status::Ok, "Hello world!")))
+///   };
+///   let cors = CorsMiddleware {
+///     allowed_origins : AllowedOrigins::Any { allow_null: false },
+///     allowed_headers: vec![UniCase("Content-Type".to_owned())],
+///     allowed_methods : vec![ Get, Post ],
+///     exposed_headers: vec![],
+///     allow_credentials: false,
+///     max_age_seconds: 60 * 60,
+///     prefer_wildcard: true
+///   };
+///
+///   let chain = cors.decorate(handler);
+///   let mut listening = Iron::new(chain).http("localhost:0").unwrap();
+///   listening.close().unwrap();
+/// }
+/// ```
 #[derive(Clone)]
 pub struct CorsMiddleware {
     /// The origins which are allowed to access this resource
