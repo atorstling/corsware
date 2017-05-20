@@ -1,12 +1,5 @@
 AccessControlAllowHeader et al with wildcard support - Not possible without
-  modifying iron definition of AccessControlAllowHeader struct
-Doc
-
-
-Name
-corrosion
-corsocean
-golf-cors
-cors-light
-
+  modifying iron definition of AccessControlAllowHeader struct + not supported by browsers yet
+Browser test-cases
+Figure out why I cannot connect to localhost on travis CI
 
