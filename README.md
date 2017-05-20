@@ -5,7 +5,7 @@ Corsware is yet another implementation of the [CORS Specification][CORS Spec] fo
 The middleware itself is simply a standard Iron `AroundMiddleware` and contains no special routing logic.
 
 # Simple Example
-```
+```rust
 extern crate iron;
 extern crate corsware;
 use corsware::CorsMiddleware;
