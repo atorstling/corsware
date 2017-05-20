@@ -23,8 +23,8 @@ fn main() {
 }
 ```
 
-# Documentation
-TODO: Link documentation
+# [Documentation](https://atorstling.github.io/corsware/corsware/index.html)
+https://atorstling.github.io/corsware/corsware/index.html
 
 ## References
 [CORS Spec]: https://www.w3.org/TR/cors/
@@ -32,4 +32,5 @@ TODO: Link documentation
 
 ## Links
 [Origin Spec](https://tools.ietf.org/html/rfc6454)
+
 [Origin Casemap Spec](https://tools.ietf.org/html/rfc4790)
