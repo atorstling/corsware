@@ -3,7 +3,7 @@ extern crate unicase;
 #[macro_use]
 extern crate hyper;
 
-use unicase::UniCase;
+pub use unicase::UniCase;
 use iron::prelude::*;
 use iron::method::Method;
 use iron::method::Method::*;
@@ -140,9 +140,7 @@ pub fn all_std_methods() -> Vec<Method> {
 /// Returns HTTP Headers commonly set by clients
 pub fn common_req_headers() -> Vec<unicase::UniCase<String>> {
     vec![UniCase("Authorization".to_owned()),
-         // To allow application/json
          UniCase("Content-Type".to_owned()),
-         // Set by some js libs
          UniCase("X-Requested-With".to_owned())]
 }
 
