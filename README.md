@@ -23,7 +23,7 @@ fn main() {
 }
 ```
 
-# [Documentation]((https://atorstling.github.io/corsware/corsware/index.html)
+# [Documentation](https://atorstling.github.io/corsware/corsware/index.html)
 https://atorstling.github.io/corsware/corsware/index.html
 
 ## References
