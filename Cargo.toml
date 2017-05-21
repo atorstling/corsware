@@ -1,23 +1,25 @@
 [package]
-name = "corsware"
-version = "0.1.0"
 authors = ["Alexander Torstling <alexander@torstling.com>"]
+categories = ["web-programming::http-server"]
 description = "CORS for Iron According to the Spec"
 documentation = "https://atorstling.github.io/corsware/corsware/index.html"
+exclude = ["docs/**"]
 homepage = "https://github.com/atorstling/corsware"
-readme = "README.md"
 keywords = ["iron", "cors", "middleware", "cross-origin"]
-categories = ["web-programming::http-server"]
 license = "MIT"
-exclude = [ "docs/**" ]
+name = "corsware"
+readme = "README.md"
+version = "0.1.1"
 
 [badges]
-travis-ci = { repository = "atorstling/corsware" }
+
+[badges.travis-ci]
+repository = "atorstling/corsware"
 
 [dependencies]
-url = "1.4.0"
-iron = "0.5.1"
-unicase = "1.4.0"
-router = "0.5.1"
 hyper = "0.10.5"
+iron = "0.5.1"
 mount = "0.3.0"
+router = "0.5.1"
+unicase = "1.4.0"
+url = "1.4.0"
