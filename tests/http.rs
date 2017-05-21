@@ -55,7 +55,7 @@ impl AutoServer {
     }
 
     pub fn with_handler<H: Handler>(handler: H) -> AutoServer {
-        let l = Iron::new(handler).http("localhost:0".to_owned()).unwrap();
+        let l = Iron::new(handler).http("127.0.0.1:0".to_owned()).unwrap();
         let p = l.socket.port();
         AutoServer {
             listening: l,
