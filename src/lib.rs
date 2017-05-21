@@ -429,7 +429,9 @@ impl CorsMiddleware {
                 // - 4. If the list of exposed headers is not empty add one or more
                 // - Access-Control-Expose-Headers headers, with as values the header field names
                 // - given in the list of exposed headers.
-                res.headers.set(AccessControlExposeHeaders(self.exposed_headers.clone()));
+                if !self.exposed_headers.is_empty() {
+                    res.headers.set(AccessControlExposeHeaders(self.exposed_headers.clone()));
+                }
                 Ok(res)
             }
             _ => result,

@@ -324,6 +324,59 @@ fn preflight_with_disallowed_method_is_error() {
 
 #[test]
 fn normal_request_sets_right_headers() {
+    let cm = cors();
+    let server = AutoServer::with_cors(cm);
+    let client = Client::new();
+    let mut headers = Headers::new();
+    headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
+    let res = client.get(&format!("http://127.0.0.1:{}/a", server.port))
+        .headers(headers)
+        .send()
+        .unwrap();
+    assert_eq!(res.status, status::ImATeapot);
+    assert!(res.headers.get::<AccessControlExposeHeaders>().is_none());
+    assert_eq!(res.headers
+                   .get::<AccessControlAllowOrigin>()
+                   .unwrap()
+                   .to_string(),
+               "http://www.a.com:8080");
+    assert!(res.headers .get::<AccessControlAllowCredentials>().is_none());
+    assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
+    assert!(res.headers.get::<AccessControlMaxAge>().is_none());
+    assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
+}
+
+#[test]
+fn expose_headers() {
+    let cm1 = cors();
+    let cm = CorsMiddleware {
+        exposed_headers: vec![UniCase("X-ExposeMe".to_owned())],
+        ..cm1
+    };
+    let server = AutoServer::with_cors(cm);
+    let client = Client::new();
+    let mut headers = Headers::new();
+    headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
+    let res = client.get(&format!("http://127.0.0.1:{}/a", server.port))
+        .headers(headers)
+        .send()
+        .unwrap();
+    assert_eq!(res.status, status::ImATeapot);
+    let expose_headers = res.headers.get::<AccessControlExposeHeaders>().unwrap();
+    assert_eq!(expose_headers.0, vec![UniCase("X-ExposeMe")]);
+    assert_eq!(res.headers
+                   .get::<AccessControlAllowOrigin>()
+                   .unwrap()
+                   .to_string(),
+               "http://www.a.com:8080");
+    assert!(res.headers .get::<AccessControlAllowCredentials>().is_none());
+    assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
+    assert!(res.headers.get::<AccessControlMaxAge>().is_none());
+    assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
+}
+
+#[test]
+fn allow_credentials() {
     let cm1 = cors();
     let cm = CorsMiddleware {
         exposed_headers: vec![UniCase("X-ExposeMe".to_owned())],
