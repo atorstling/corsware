@@ -26,13 +26,13 @@ header! {
     (OriginHeader, "Origin") => [String]
 }
 
-/// Specifies which Origins are allowed to access this resource
+/// Specifies which origins are allowed to access this resource
 #[derive(Clone)]
 pub enum AllowedOrigins {
-    /// Any Origin is allowed.
+    /// Any origin is allowed.
     Any {
         /// Allowing a null origin is a separate setting, since it's
-        /// risky to trust sources with a null Origin, see
+        /// risky to trust sources with a null origin, see
         /// https://tools.ietf.org/id/draft-abarth-origin-03.html#rfc.section.6
         /// https://w3c.github.io/webappsec-cors-for-developers/
         allow_null: bool,
@@ -69,7 +69,7 @@ impl AllowedOrigins {
     /// flag is supplied since AccessControlAllowOrigin * is forbidden when credentials
     /// are allowed.
     ///
-    /// We're not using the iron Origin header to construct an Origin directly, since
+    /// We're not using the iron Origin header to construct an origin directly, since
     /// we are dependent on url.port_or_known_default() to get the default port. This
     /// method is only available after parsing the Origin header to an URL.
     pub fn allowed_for(&self,
@@ -178,19 +178,19 @@ pub struct CorsMiddleware {
     pub max_age_seconds: u32,
     /// If set, wildcard ('*') will be used as value
     /// for AccessControlAllowOrigin if possible. If not set,
-    /// echoing the incoming Origin will be preferred.
+    /// echoing the incoming origin will be preferred.
     /// If credentials are allowed, echoing will always be used.
     pub prefer_wildcard: bool,
 }
 
 /// Returns all standard HTTP verbs:
-/// `[Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch]``
+/// `[Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch]`
 pub fn all_std_methods() -> Vec<Method> {
     vec![Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch]
 }
 
 /// Returns HTTP Headers commonly set by clients (js frontend frameworks and the like):
-/// `Authorization, Content-Type and X-Requested-With`
+/// `[Authorization, Content-Type and X-Requested-With]`
 pub fn common_req_headers() -> Vec<unicase::UniCase<String>> {
     vec![UniCase("Authorization".to_owned()),
          UniCase("Content-Type".to_owned()),
