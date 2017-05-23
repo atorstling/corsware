@@ -29,7 +29,7 @@
 
     <nav class="sidebar">
         
-        <p class='location'>Enum AllowedOrigins</p><div class="block items"><ul><li><a href="#variants">Variants</a></li><li><a href="#implementations">Trait Implementations</a></li></ul></div><p class='location'><a href='index.html'>corsware</a></p><script>window.sidebarCurrent = {name: 'AllowedOrigins', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+        <p class='location'>Enum AllowedOrigins</p><div class="block items"><ul><li><a href="#variants">Variants</a></li><li><a href="#methods">Methods</a></li><li><a href="#implementations">Trait Implementations</a></li></ul></div><p class='location'><a href='index.html'>corsware</a></p><script>window.sidebarCurrent = {name: 'AllowedOrigins', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script>
     </nav>
 
     <nav class="sub">
@@ -48,24 +48,34 @@
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/corsware/lib.rs.html#29-41' title='goto source code'>[src]</a></span></h1>
+               </span><a class='srclink' href='../src/corsware/lib.rs.html#31-43' title='goto source code'>[src]</a></span></h1>
 <pre class='rust enum'>pub enum AllowedOrigins {
     Any {
         allow_null: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
     },
     Specific(<a class="struct" href="https://doc.rust-lang.org/nightly/std/collections/hash/set/struct.HashSet.html" title="struct std::collections::hash::set::HashSet">HashSet</a>&lt;<a class="enum" href="../corsware/enum.Origin.html" title="enum corsware::Origin">Origin</a>&gt;),
-}</pre><div class='docblock'><p>Specifies which Origins are allowed to access this resource</p>
+}</pre><div class='docblock'><p>Specifies which origins are allowed to access this resource</p>
 </div><h2 id='variants' class='variants'>Variants</h2>
-<span id='variant.Any' class='variant'><span id='Any.v' class='invisible'><code>Any</code></span></span><div class='docblock'><p>Any Origin is allowed.</p>
+<span id='variant.Any' class='variant'><span id='Any.v' class='invisible'><code>Any</code></span></span><div class='docblock'><p>Any origin is allowed.</p>
 </div><span class='docblock autohide sub-variant' id='variant.Any.fields'><h3 class='fields'>Fields of <code>Any</code></h3>
 
                            <table><tr><td id='variant.Any.field.allow_null'><span id='Any.v.allow_null.v' class='invisible'><code>allow_null:&nbsp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code></span></td><td><div class='docblock'><p>Allowing a null origin is a separate setting, since it&#39;s
-risky to trust sources with a null Origin, see
+risky to trust sources with a null origin, see
 <a href="https://tools.ietf.org/id/draft-abarth-origin-03.html#rfc.section.6">https://tools.ietf.org/id/draft-abarth-origin-03.html#rfc.section.6</a>
 <a href="https://w3c.github.io/webappsec-cors-for-developers/">https://w3c.github.io/webappsec-cors-for-developers/</a></p>
 </div></td></tr></table></span><span id='variant.Specific' class='variant'><span id='Specific.v' class='invisible'><code>Specific(<a class="struct" href="https://doc.rust-lang.org/nightly/std/collections/hash/set/struct.HashSet.html" title="struct std::collections::hash::set::HashSet">HashSet</a>&lt;<a class="enum" href="../corsware/enum.Origin.html" title="enum corsware::Origin">Origin</a>&gt;)</code></span></span><div class='docblock'><p>Allow a specific set of origins. Remember that allowing
 for a null header is risky.</p>
-</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="enum" href="../corsware/enum.AllowedOrigins.html" title="enum corsware::AllowedOrigins">AllowedOrigins</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/corsware/lib.rs.html#28' title='goto source code'>[src]</a></span></h3>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><span class='in-band'><code>impl <a class="enum" href="../corsware/enum.AllowedOrigins.html" title="enum corsware::AllowedOrigins">AllowedOrigins</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/corsware/lib.rs.html#45-105' title='goto source code'>[src]</a></span></h3>
+<div class='impl-items'><h4 id='method.allowed_for' class="method"><span id='allowed_for.v' class='invisible'><code>fn <a href='#method.allowed_for' class='fnname'>allowed_for</a>(<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;self, <br>&nbsp;&nbsp;&nbsp;&nbsp;origin_string: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;allow_credentials: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>, <br>&nbsp;&nbsp;&nbsp;&nbsp;prefer_wildcard: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a><br>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/collections/string/struct.String.html" title="struct collections::string::String">String</a>&gt;</code></span></h4>
+<div class='docblock'><p>Returns the value of AccessControlAllowOrigin
+given the specified Origin header in the request. The allow_credentials
+flag is supplied since AccessControlAllowOrigin * is forbidden when credentials
+are allowed.</p>
+
+<p>We&#39;re not using the iron Origin header to construct an origin directly, since
+we are dependent on url.port_or_known_default() to get the default port. This
+method is only available after parsing the Origin header to an URL.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html" title="trait core::clone::Clone">Clone</a> for <a class="enum" href="../corsware/enum.AllowedOrigins.html" title="enum corsware::AllowedOrigins">AllowedOrigins</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/corsware/lib.rs.html#30' title='goto source code'>[src]</a></span></h3>
 <div class='impl-items'><h4 id='method.clone' class="method"><span id='clone.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class="enum" href="../corsware/enum.AllowedOrigins.html" title="enum corsware::AllowedOrigins">AllowedOrigins</a></code></span></h4>
 <div class='docblock'><p>Returns a copy of the value. <a href="https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#tymethod.clone">Read more</a></p>
 </div><h4 id='method.clone_from' class="method"><span id='clone_from.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code><div class='since' title='Stable since Rust version 1.0.0'>1.0.0</div></span></h4>

@@ -496,6 +496,32 @@
 <span id="451">451</span>
 <span id="452">452</span>
 <span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
 </pre><pre class="rust ">
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">iron</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">unicase</span>;
@@ -511,7 +537,7 @@
 <span class="kw">use</span> <span class="ident">iron</span>::<span class="ident">headers</span>::{<span class="ident">AccessControlRequestMethod</span>, <span class="ident">AccessControlRequestHeaders</span>,
                     <span class="ident">AccessControlAllowOrigin</span>, <span class="ident">AccessControlAllowHeaders</span>, <span class="ident">AccessControlMaxAge</span>,
                     <span class="ident">AccessControlAllowMethods</span>, <span class="ident">AccessControlAllowCredentials</span>,
-                    <span class="ident">AccessControlExposeHeaders</span>};
+                    <span class="ident">AccessControlExposeHeaders</span>, <span class="ident">Vary</span>};
 <span class="kw">use</span> <span class="ident">iron</span>::<span class="ident">middleware</span>::{<span class="ident">AroundMiddleware</span>, <span class="ident">Handler</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashSet</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">iter</span>::<span class="ident">FromIterator</span>;
@@ -519,17 +545,19 @@
 
 <span class="kw">mod</span> <span class="ident">origin</span>;
 
-<span class="comment">// Use custom Origin header to allow for null Origin, which the standard</span>
-<span class="comment">// iron header does not allow</span>
-<span class="macro">header</span><span class="macro">!</span> { (<span class="ident">OriginHeader</span>, <span class="string">&quot;Origin&quot;</span>) <span class="op">=&gt;</span> [<span class="ident">String</span>] }
+<span class="macro">header</span><span class="macro">!</span> {
+    <span class="doccomment">/// A Custom Origin header which allows for null origins, something the standard</span>
+    <span class="doccomment">/// Iron header does not.</span>
+    (<span class="ident">OriginHeader</span>, <span class="string">&quot;Origin&quot;</span>) <span class="op">=&gt;</span> [<span class="ident">String</span>]
+}
 
-<span class="doccomment">/// Specifies which Origins are allowed to access this resource</span>
+<span class="doccomment">/// Specifies which origins are allowed to access this resource</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AllowedOrigins</span> {
-    <span class="doccomment">/// Any Origin is allowed.</span>
+    <span class="doccomment">/// Any origin is allowed.</span>
     <span class="ident">Any</span> {
         <span class="doccomment">/// Allowing a null origin is a separate setting, since it&#39;s</span>
-        <span class="doccomment">/// risky to trust sources with a null Origin, see</span>
+        <span class="doccomment">/// risky to trust sources with a null origin, see</span>
         <span class="doccomment">/// https://tools.ietf.org/id/draft-abarth-origin-03.html#rfc.section.6</span>
         <span class="doccomment">/// https://w3c.github.io/webappsec-cors-for-developers/</span>
         <span class="ident">allow_null</span>: <span class="ident">bool</span>,
@@ -540,6 +568,8 @@
 }
 
 <span class="kw">impl</span> <span class="ident">AllowedOrigins</span> {
+    <span class="doccomment">/// Allow the provided origin access. Respond with the appropriate</span>
+    <span class="doccomment">/// AccessControlAllowOrigin header.</span>
     <span class="kw">fn</span> <span class="ident">allow</span>(<span class="kw-2">&amp;</span><span class="self">self</span>,
              <span class="ident">origin_string</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
              <span class="ident">prefer_wildcard</span>: <span class="ident">bool</span>,
@@ -564,14 +594,14 @@
     <span class="doccomment">/// flag is supplied since AccessControlAllowOrigin * is forbidden when credentials</span>
     <span class="doccomment">/// are allowed.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// We&#39;re not using the iron Origin header to construct an Origin directly, since</span>
+    <span class="doccomment">/// We&#39;re not using the iron Origin header to construct an origin directly, since</span>
     <span class="doccomment">/// we are dependent on url.port_or_known_default() to get the default port. This</span>
     <span class="doccomment">/// method is only available after parsing the Origin header to an URL.</span>
-    <span class="kw">fn</span> <span class="ident">allowed_for</span>(<span class="kw-2">&amp;</span><span class="self">self</span>,
-                   <span class="ident">origin_string</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-                   <span class="ident">allow_credentials</span>: <span class="ident">bool</span>,
-                   <span class="ident">prefer_wildcard</span>: <span class="ident">bool</span>)
-                   <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">allowed_for</span>(<span class="kw-2">&amp;</span><span class="self">self</span>,
+                       <span class="ident">origin_string</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+                       <span class="ident">allow_credentials</span>: <span class="ident">bool</span>,
+                       <span class="ident">prefer_wildcard</span>: <span class="ident">bool</span>)
+                       <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="ident">Origin</span>::<span class="ident">parse_allow_null</span>(<span class="ident">origin_string</span>) {
             <span class="prelude-val">Err</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">None</span>,
             <span class="prelude-val">Ok</span>(<span class="ident">origin</span>) <span class="op">=&gt;</span> {
@@ -599,10 +629,10 @@
     }
 }
 
-<span class="doccomment">/// An iron middleware which implements CORS</span>
+<span class="doccomment">/// An Iron middleware which implements CORS.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Note: Not using `Vec&lt;Header&gt;` to represent</span>
-<span class="doccomment">/// headers since the iron `Header`</span>
+<span class="doccomment">/// headers since the Iron `Header`</span>
 <span class="doccomment">/// type is representing a `Key=Value` pair and not just the key.</span>
 <span class="doccomment">/// In other words, the Header type represents an instance of</span>
 <span class="doccomment">/// a HTTP header. What we need here is something representing the</span>
@@ -673,17 +703,19 @@
     <span class="kw">pub</span> <span class="ident">max_age_seconds</span>: <span class="ident">u32</span>,
     <span class="doccomment">/// If set, wildcard (&#39;*&#39;) will be used as value</span>
     <span class="doccomment">/// for AccessControlAllowOrigin if possible. If not set,</span>
-    <span class="doccomment">/// echoing the incoming Origin will be preferred.</span>
+    <span class="doccomment">/// echoing the incoming origin will be preferred.</span>
     <span class="doccomment">/// If credentials are allowed, echoing will always be used.</span>
     <span class="kw">pub</span> <span class="ident">prefer_wildcard</span>: <span class="ident">bool</span>,
 }
 
-<span class="doccomment">/// Returns all standard HTTP verbs</span>
+<span class="doccomment">/// Returns all standard HTTP verbs:</span>
+<span class="doccomment">/// `[Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch]`</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">all_std_methods</span>() <span class="op">-&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Method</span><span class="op">&gt;</span> {
     <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Options</span>, <span class="ident">Get</span>, <span class="ident">Post</span>, <span class="ident">Put</span>, <span class="ident">Delete</span>, <span class="ident">Head</span>, <span class="ident">Trace</span>, <span class="ident">Connect</span>, <span class="ident">Patch</span>]
 }
 
-<span class="doccomment">/// Returns HTTP Headers commonly set by clients</span>
+<span class="doccomment">/// Returns HTTP Headers commonly set by clients (js frontend frameworks and the like):</span>
+<span class="doccomment">/// `[Authorization, Content-Type and X-Requested-With]`</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">common_req_headers</span>() <span class="op">-&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">unicase</span>::<span class="ident">UniCase</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;&gt;</span> {
     <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">UniCase</span>(<span class="string">&quot;Authorization&quot;</span>.<span class="ident">to_owned</span>()),
          <span class="ident">UniCase</span>(<span class="string">&quot;Content-Type&quot;</span>.<span class="ident">to_owned</span>()),
@@ -710,6 +742,14 @@
         }
     }
 
+    <span class="doccomment">/// These are all headers which can influence the outcome of</span>
+    <span class="doccomment">/// any given CORS request.</span>
+    <span class="kw">fn</span> <span class="ident">vary_headers</span>() <span class="op">-&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">UniCase</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;&gt;</span> {
+        <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">UniCase</span>(<span class="string">&quot;Origin&quot;</span>.<span class="ident">to_owned</span>()),
+             <span class="ident">UniCase</span>(<span class="string">&quot;Access-Control-Request-Method&quot;</span>.<span class="ident">to_owned</span>()),
+             <span class="ident">UniCase</span>(<span class="string">&quot;Access-Control-Request-Headers&quot;</span>.<span class="ident">to_owned</span>())]
+    }
+
     <span class="doccomment">/// Handle a potential CORS request. Detects if this is a</span>
     <span class="doccomment">/// preflight or normal method, adding CORS headers as appropriate</span>
     <span class="kw">fn</span> <span class="ident">handle</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Request</span>, <span class="ident">handler</span>: <span class="kw-2">&amp;</span><span class="ident">Handler</span>) <span class="op">-&gt;</span> <span class="ident">IronResult</span><span class="op">&lt;</span><span class="ident">Response</span><span class="op">&gt;</span> {
@@ -717,10 +757,20 @@
         <span class="comment">// what-is-the-expected-response-to-an-invalid-cors-request</span>
         <span class="comment">// http://stackoverflow.com/questions/32331737/</span>
         <span class="comment">// how-can-i-identify-a-cors-preflight-request</span>
-        <span class="kw">if</span> <span class="ident">req</span>.<span class="ident">method</span> <span class="op">==</span> <span class="ident">Options</span> <span class="op">&amp;&amp;</span> <span class="ident">req</span>.<span class="ident">headers</span>.<span class="ident">get</span>::<span class="op">&lt;</span><span class="ident">AccessControlRequestMethod</span><span class="op">&gt;</span>().<span class="ident">is_some</span>() {
+        <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">req</span>.<span class="ident">method</span> <span class="op">==</span> <span class="ident">Options</span> <span class="op">&amp;&amp;</span>
+                     <span class="ident">req</span>.<span class="ident">headers</span>.<span class="ident">get</span>::<span class="op">&lt;</span><span class="ident">AccessControlRequestMethod</span><span class="op">&gt;</span>().<span class="ident">is_some</span>() {
             <span class="self">self</span>.<span class="ident">handle_preflight</span>(<span class="ident">req</span>, <span class="ident">handler</span>)
         } <span class="kw">else</span> {
             <span class="self">self</span>.<span class="ident">handle_normal</span>(<span class="ident">req</span>, <span class="ident">handler</span>)
+        };
+        <span class="comment">// Vary-Headers are outside the CORS specification, but still important for</span>
+        <span class="comment">// caching. These should be set unconditionally for all resources covered by CORS</span>
+        <span class="kw">match</span> <span class="ident">res</span> {
+            <span class="prelude-val">Ok</span>(<span class="kw-2">mut</span> <span class="ident">r</span>) <span class="op">=&gt;</span> {
+                <span class="ident">r</span>.<span class="ident">headers</span>.<span class="ident">set</span>(<span class="ident">Vary</span>::<span class="ident">Items</span>(<span class="ident">CorsMiddleware</span>::<span class="ident">vary_headers</span>()));
+                <span class="prelude-val">Ok</span>(<span class="ident">r</span>)
+            }
+            <span class="ident">x</span> <span class="op">=&gt;</span> <span class="ident">x</span>,
         }
     }
 
@@ -928,7 +978,9 @@
                 <span class="comment">// - 4. If the list of exposed headers is not empty add one or more</span>
                 <span class="comment">// - Access-Control-Expose-Headers headers, with as values the header field names</span>
                 <span class="comment">// - given in the list of exposed headers.</span>
-                <span class="ident">res</span>.<span class="ident">headers</span>.<span class="ident">set</span>(<span class="ident">AccessControlExposeHeaders</span>(<span class="self">self</span>.<span class="ident">exposed_headers</span>.<span class="ident">clone</span>()));
+                <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">exposed_headers</span>.<span class="ident">is_empty</span>() {
+                    <span class="ident">res</span>.<span class="ident">headers</span>.<span class="ident">set</span>(<span class="ident">AccessControlExposeHeaders</span>(<span class="self">self</span>.<span class="ident">exposed_headers</span>.<span class="ident">clone</span>()));
+                }
                 <span class="prelude-val">Ok</span>(<span class="ident">res</span>)
             }
             _ <span class="op">=&gt;</span> <span class="ident">result</span>,

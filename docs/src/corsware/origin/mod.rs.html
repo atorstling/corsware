@@ -223,6 +223,8 @@
 <span id="178">178</span>
 <span id="179">179</span>
 <span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
 </pre><pre class="rust ">
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">url</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">iron</span>;
@@ -233,18 +235,22 @@
 <span class="doccomment">/// A struct which implements the concept &#39;Web Origin&#39; as defined in</span>
 <span class="doccomment">/// https://tools.ietf.org/html/rfc6454.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// This implementation only considers hierarchical URLs.</span>
+<span class="doccomment">/// This implementation only considers hierarchical URLs and null.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The rationale behind skipping other valid origins such as URLs,</span>
-<span class="doccomment">/// random id:s and null is that any origin which is not a</span>
-<span class="doccomment">/// (scheme, host, port)-triple should never be equal to another origin.</span>
+<span class="doccomment">/// The rationale behind skipping random id:s is that any such random origin should</span>
+<span class="doccomment">/// never be equal to another random origin.</span>
 <span class="doccomment">/// This has the implication that it&#39;s unneccesary to compare them to</span>
-<span class="doccomment">/// any other and we might as well return parse error and handle that</span>
+<span class="doccomment">/// each other and we might as well return parse error and handle that</span>
 <span class="doccomment">/// case separately.</span>
 <span class="doccomment">///</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Origin</span> {
+    <span class="doccomment">/// The `Null` origin, indicating that a resource lacks a proper origin.</span>
+    <span class="doccomment">/// This value is commonly used in the Origin header to indicate that an origin couldn&#39;t be</span>
+    <span class="doccomment">/// deduced or was deliberitely left out. This value is set instead of omitting the Origin</span>
+    <span class="comment">//  header, since ommiting the header could just signal a client unaware of the origin concept.</span>
     <span class="ident">Null</span>,
+    <span class="doccomment">/// The common origin, formed from a `(schem, host, port)` triple.</span>
     <span class="ident">Triple</span> {
         <span class="doccomment">/// Lower-case scheme</span>
         <span class="ident">scheme</span>: <span class="ident">String</span>,
@@ -255,8 +261,6 @@
     },
 }
 
-
-<span class="doccomment">/// A Web Origin</span>
 <span class="kw">impl</span> <span class="ident">Origin</span> {
     <span class="doccomment">/// Parses the given string as an origin.</span>
     <span class="doccomment">/// #Errors</span>
@@ -368,9 +372,9 @@
     <span class="doccomment">/// assert_eq!(Origin::parse(&quot;hTtP://a.com&quot;).unwrap().scheme(), &amp;&quot;http&quot;.to_owned());</span>
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">scheme</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">String</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="kw-2">&amp;</span><span class="ident">Origin</span>::<span class="ident">Null</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Null Origin has no scheme&quot;</span>),
-            <span class="kw-2">&amp;</span><span class="ident">Origin</span>::<span class="ident">Triple</span> { <span class="kw-2">ref</span> <span class="ident">scheme</span>, .. } <span class="op">=&gt;</span> <span class="kw-2">&amp;</span><span class="ident">scheme</span>,
+        <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span> {
+            <span class="ident">Origin</span>::<span class="ident">Null</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Null Origin has no scheme&quot;</span>),
+            <span class="ident">Origin</span>::<span class="ident">Triple</span> { <span class="kw-2">ref</span> <span class="ident">scheme</span>, .. } <span class="op">=&gt;</span> <span class="ident">scheme</span>,
         }
     }
 
@@ -381,9 +385,9 @@
     <span class="doccomment">/// assert_eq!(Origin::parse(&quot;ftp://Aö.coM&quot;).unwrap().host(), &amp;&quot;xn--a-1ga.com&quot;.to_owned());</span>
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">host</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">String</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="kw-2">&amp;</span><span class="ident">Origin</span>::<span class="ident">Null</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Null Origin has no host&quot;</span>),
-            <span class="kw-2">&amp;</span><span class="ident">Origin</span>::<span class="ident">Triple</span> { <span class="kw-2">ref</span> <span class="ident">host</span>, .. } <span class="op">=&gt;</span> <span class="kw-2">&amp;</span><span class="ident">host</span>,
+        <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span> {
+            <span class="ident">Origin</span>::<span class="ident">Null</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Null Origin has no host&quot;</span>),
+            <span class="ident">Origin</span>::<span class="ident">Triple</span> { <span class="kw-2">ref</span> <span class="ident">host</span>, .. } <span class="op">=&gt;</span> <span class="ident">host</span>,
         }
     }
 
@@ -395,9 +399,9 @@
     <span class="doccomment">/// assert_eq!(Origin::parse(&quot;ftp://a.com&quot;).unwrap().port(), 21);</span>
     <span class="doccomment">/// ```</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">port</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">u16</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="kw-2">&amp;</span><span class="ident">Origin</span>::<span class="ident">Null</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Null Origin has no port&quot;</span>),
-            <span class="kw-2">&amp;</span><span class="ident">Origin</span>::<span class="ident">Triple</span> { <span class="kw-2">ref</span> <span class="ident">port</span>, .. } <span class="op">=&gt;</span> <span class="kw-2">*</span><span class="ident">port</span>,
+        <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span> {
+            <span class="ident">Origin</span>::<span class="ident">Null</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Null Origin has no port&quot;</span>),
+            <span class="ident">Origin</span>::<span class="ident">Triple</span> { <span class="kw-2">ref</span> <span class="ident">port</span>, .. } <span class="op">=&gt;</span> <span class="kw-2">*</span><span class="ident">port</span>,
         }
     }
 }
