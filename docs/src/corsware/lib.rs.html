@@ -522,7 +522,13 @@
 <span id="477">477</span>
 <span id="478">478</span>
 <span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
 </pre><pre class="rust ">
+<span class="doccomment">//! # Corsware</span>
+<span class="doccomment">//! Yet another implementation of the CORS Specification for Iron.</span>
+
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">iron</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">unicase</span>;
 <span class="attribute">#[<span class="ident">macro_use</span>]</span>
@@ -629,7 +635,7 @@
     }
 }
 
-<span class="doccomment">/// An Iron middleware which implements CORS.</span>
+<span class="doccomment">/// An Iron middleware implementing CORS.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Note: Not using `Vec&lt;Header&gt;` to represent</span>
 <span class="doccomment">/// headers since the Iron `Header`</span>
