@@ -1,3 +1,6 @@
+//! # Corsware
+//! Yet another implementation of the CORS Specification for Iron.
+
 extern crate iron;
 extern crate unicase;
 #[macro_use]
@@ -104,7 +107,7 @@ impl AllowedOrigins {
     }
 }
 
-/// An Iron middleware which implements CORS.
+/// An Iron middleware implementing CORS.
 ///
 /// Note: Not using `Vec<Header>` to represent
 /// headers since the Iron `Header`
