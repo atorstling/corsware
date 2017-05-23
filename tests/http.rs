@@ -14,7 +14,8 @@ use std::io::Read;
 use iron::headers::Origin as OriginHeader;
 use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
                     AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlAllowMethods,
-                    AccessControlAllowCredentials, AccessControlExposeHeaders, AccessControlMaxAge, Vary};
+                    AccessControlAllowCredentials, AccessControlExposeHeaders, AccessControlMaxAge,
+                    Vary};
 use iron::method::Method::*;
 use corsware::{CorsMiddleware, AllowedOrigins, Origin};
 use std::str::FromStr;
@@ -302,7 +303,10 @@ fn normal_request_sets_right_headers() {
     assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
     assert!(res.headers.get::<AccessControlMaxAge>().is_none());
     assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
-    assert_eq!(res.headers.get::<Vary>().unwrap().to_string(),
+    assert_eq!(res.headers
+                   .get::<Vary>()
+                   .unwrap()
+                   .to_string(),
                "Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
 }
 
