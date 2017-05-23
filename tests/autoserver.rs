@@ -22,6 +22,13 @@ pub fn cors() -> CorsMiddleware {
     CorsMiddleware::permissive()
 }
 
+impl Default for AutoServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 impl AutoServer {
     pub fn new() -> AutoServer {
         AutoServer::with_cors(cors())

@@ -20,9 +20,11 @@ pub use origin::Origin;
 
 mod origin;
 
-/// Use custom Origin header to allow for null Origin, which the standard
-/// iron header does not allow
-header! { (OriginHeader, "Origin") => [String] }
+header! {
+    /// A Custom Origin header which allows for null origins, something the standard
+    /// Iron header does not.
+    (OriginHeader, "Origin") => [String]
+}
 
 /// Specifies which Origins are allowed to access this resource
 #[derive(Clone)]

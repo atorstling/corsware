@@ -7,18 +7,22 @@ use std::ascii::AsciiExt;
 /// A struct which implements the concept 'Web Origin' as defined in
 /// https://tools.ietf.org/html/rfc6454.
 ///
-/// This implementation only considers hierarchical URLs.
+/// This implementation only considers hierarchical URLs and null.
 ///
-/// The rationale behind skipping other valid origins such as URLs,
-/// random id:s and null is that any origin which is not a
-/// (scheme, host, port)-triple should never be equal to another origin.
+/// The rationale behind skipping random id:s is that any such random origin should
+/// never be equal to another random origin.
 /// This has the implication that it's unneccesary to compare them to
-/// any other and we might as well return parse error and handle that
+/// each other and we might as well return parse error and handle that
 /// case separately.
 ///
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub enum Origin {
+    /// The `Null` origin, indicating that a resource lacks a proper origin.
+    /// This value is commonly used in the Origin header to indicate that an origin couldn't be
+    /// deduced or was deliberitely left out. This value is set instead of omitting the Origin
+    //  header, since ommiting the header could just signal a client unaware of the origin concept.
     Null,
+    /// The common origin, formed from a `(schem, host, port)` triple.
     Triple {
         /// Lower-case scheme
         scheme: String,
@@ -29,8 +33,6 @@ pub enum Origin {
     },
 }
 
-
-/// A Web Origin
 impl Origin {
     /// Parses the given string as an origin.
     /// #Errors
@@ -142,9 +144,9 @@ impl Origin {
     /// assert_eq!(Origin::parse("hTtP://a.com").unwrap().scheme(), &"http".to_owned());
     /// ```
     pub fn scheme(&self) -> &String {
-        match self {
-            &Origin::Null => panic!("Null Origin has no scheme"),
-            &Origin::Triple { ref scheme, .. } => &scheme,
+        match *self {
+            Origin::Null => panic!("Null Origin has no scheme"),
+            Origin::Triple { ref scheme, .. } => scheme,
         }
     }
 
@@ -155,9 +157,9 @@ impl Origin {
     /// assert_eq!(Origin::parse("ftp://Aö.coM").unwrap().host(), &"xn--a-1ga.com".to_owned());
     /// ```
     pub fn host(&self) -> &String {
-        match self {
-            &Origin::Null => panic!("Null Origin has no host"),
-            &Origin::Triple { ref host, .. } => &host,
+        match *self {
+            Origin::Null => panic!("Null Origin has no host"),
+            Origin::Triple { ref host, .. } => host,
         }
     }
 
@@ -169,9 +171,9 @@ impl Origin {
     /// assert_eq!(Origin::parse("ftp://a.com").unwrap().port(), 21);
     /// ```
     pub fn port(&self) -> u16 {
-        match self {
-            &Origin::Null => panic!("Null Origin has no port"),
-            &Origin::Triple { ref port, .. } => *port,
+        match *self {
+            Origin::Null => panic!("Null Origin has no port"),
+            Origin::Triple { ref port, .. } => *port,
         }
     }
 }
