@@ -12,7 +12,7 @@ use iron::status;
 use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
                     AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlMaxAge,
                     AccessControlAllowMethods, AccessControlAllowCredentials,
-                    AccessControlExposeHeaders};
+                    AccessControlExposeHeaders, Vary};
 use iron::middleware::{AroundMiddleware, Handler};
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -20,8 +20,8 @@ pub use origin::Origin;
 
 mod origin;
 
-// Use custom Origin header to allow for null Origin, which the standard
-// iron header does not allow
+/// Use custom Origin header to allow for null Origin, which the standard
+/// iron header does not allow
 header! { (OriginHeader, "Origin") => [String] }
 
 /// Specifies which Origins are allowed to access this resource
@@ -41,6 +41,8 @@ pub enum AllowedOrigins {
 }
 
 impl AllowedOrigins {
+    /// Allow the provided origin access. Respond with the appropriate
+    /// AccessControlAllowOrigin header.
     fn allow(&self,
              origin_string: &str,
              prefer_wildcard: bool,
@@ -68,11 +70,11 @@ impl AllowedOrigins {
     /// We're not using the iron Origin header to construct an Origin directly, since
     /// we are dependent on url.port_or_known_default() to get the default port. This
     /// method is only available after parsing the Origin header to an URL.
-    fn allowed_for(&self,
-                   origin_string: &str,
-                   allow_credentials: bool,
-                   prefer_wildcard: bool)
-                   -> Option<String> {
+    pub fn allowed_for(&self,
+                       origin_string: &str,
+                       allow_credentials: bool,
+                       prefer_wildcard: bool)
+                       -> Option<String> {
         match Origin::parse_allow_null(origin_string) {
             Err(_) => None,
             Ok(origin) => {
@@ -100,10 +102,10 @@ impl AllowedOrigins {
     }
 }
 
-/// An iron middleware which implements CORS
+/// An Iron middleware which implements CORS.
 ///
 /// Note: Not using `Vec<Header>` to represent
-/// headers since the iron `Header`
+/// headers since the Iron `Header`
 /// type is representing a `Key=Value` pair and not just the key.
 /// In other words, the Header type represents an instance of
 /// a HTTP header. What we need here is something representing the
@@ -179,12 +181,14 @@ pub struct CorsMiddleware {
     pub prefer_wildcard: bool,
 }
 
-/// Returns all standard HTTP verbs
+/// Returns all standard HTTP verbs:
+/// `[Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch]``
 pub fn all_std_methods() -> Vec<Method> {
     vec![Options, Get, Post, Put, Delete, Head, Trace, Connect, Patch]
 }
 
-/// Returns HTTP Headers commonly set by clients
+/// Returns HTTP Headers commonly set by clients (js frontend frameworks and the like):
+/// `Authorization, Content-Type and X-Requested-With`
 pub fn common_req_headers() -> Vec<unicase::UniCase<String>> {
     vec![UniCase("Authorization".to_owned()),
          UniCase("Content-Type".to_owned()),
@@ -211,6 +215,14 @@ impl CorsMiddleware {
         }
     }
 
+    /// These are all headers which can influence the outcome of
+    /// any given CORS request.
+    fn vary_headers() -> Vec<UniCase<String>> {
+        vec![UniCase("Origin".to_owned()),
+             UniCase("Access-Control-Request-Method".to_owned()),
+             UniCase("Access-Control-Request-Headers".to_owned())]
+    }
+
     /// Handle a potential CORS request. Detects if this is a
     /// preflight or normal method, adding CORS headers as appropriate
     fn handle(&self, req: &mut Request, handler: &Handler) -> IronResult<Response> {
@@ -218,10 +230,20 @@ impl CorsMiddleware {
         // what-is-the-expected-response-to-an-invalid-cors-request
         // http://stackoverflow.com/questions/32331737/
         // how-can-i-identify-a-cors-preflight-request
-        if req.method == Options && req.headers.get::<AccessControlRequestMethod>().is_some() {
+        let res = if req.method == Options &&
+                     req.headers.get::<AccessControlRequestMethod>().is_some() {
             self.handle_preflight(req, handler)
         } else {
             self.handle_normal(req, handler)
+        };
+        // Vary-Headers are outside the CORS specification, but still important for
+        // caching. These should be set unconditionally for all resources covered by CORS
+        match res {
+            Ok(mut r) => {
+                r.headers.set(Vary::Items(CorsMiddleware::vary_headers()));
+                Ok(r)
+            }
+            x => x,
         }
     }
 

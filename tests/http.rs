@@ -5,71 +5,26 @@ extern crate unicase;
 #[macro_use]
 extern crate hyper;
 extern crate mount;
-use iron::Listening;
 use self::router::Router;
 use iron::prelude::*;
 use iron::status;
-use self::mount::Mount;
 use self::hyper::Client;
 use self::hyper::header::Headers;
 use std::io::Read;
 use iron::headers::Origin as OriginHeader;
 use iron::headers::{AccessControlRequestMethod, AccessControlRequestHeaders,
                     AccessControlAllowOrigin, AccessControlAllowHeaders, AccessControlAllowMethods,
-                    AccessControlAllowCredentials, AccessControlExposeHeaders, AccessControlMaxAge};
+                    AccessControlAllowCredentials, AccessControlExposeHeaders, AccessControlMaxAge, Vary};
 use iron::method::Method::*;
-use iron::middleware::Handler;
 use corsware::{CorsMiddleware, AllowedOrigins, Origin};
 use std::str::FromStr;
 use std::collections::HashSet;
 use unicase::UniCase;
 
-struct AutoServer {
-    listening: Listening,
-    port: u16,
-}
 
-fn cors() -> CorsMiddleware {
-    CorsMiddleware::permissive()
-}
 
-impl AutoServer {
-    pub fn new() -> AutoServer {
-        AutoServer::with_cors(cors())
-    }
-
-    pub fn with_cors(cors: CorsMiddleware) -> AutoServer {
-        let get_handler = |_: &mut Request| Ok(Response::with((status::ImATeapot, "")));
-        let put_handler = |_: &mut Request| Ok(Response::with((status::BadRequest, "")));
-
-        let mut router = Router::new();
-        router.get("", get_handler, "get_a");
-        router.put("", put_handler, "put_a");
-
-        let mut chain = Chain::new(router);
-        chain.link_around(cors);
-        let mut mount = Mount::new();
-
-        mount.mount("/a", chain);
-        AutoServer::with_handler(mount)
-    }
-
-    pub fn with_handler<H: Handler>(handler: H) -> AutoServer {
-        let l = Iron::new(handler).http("127.0.0.1:0".to_owned()).unwrap();
-        let p = l.socket.port();
-        AutoServer {
-            listening: l,
-            port: p,
-        }
-    }
-}
-
-impl Drop for AutoServer {
-    fn drop(&mut self) {
-        // Workaround for https://github.com/hyperium/hyper/issues/338
-        self.listening.close().unwrap();
-    }
-}
+mod autoserver;
+use autoserver::{AutoServer, cors};
 
 #[test]
 fn normal_request_possible() {
@@ -132,15 +87,18 @@ fn preflight_with_allowed_origin_sets_all_headers() {
     assert_eq!(payload, "");
     assert_eq!(res.status, status::NoContent);
     let allow_origin = res.headers.get::<AccessControlAllowOrigin>().unwrap();
-    assert_eq!(format!("{}", allow_origin), "http://www.a.com:8080");
+    assert_eq!(allow_origin.to_string(), "http://www.a.com:8080");
     let allow_headers = res.headers.get::<AccessControlAllowHeaders>().unwrap();
-    assert_eq!(format!("{}", allow_headers),
+    assert_eq!(allow_headers.to_string(),
                "Authorization, Content-Type, X-Requested-With");
     let allow_methods = res.headers.get::<AccessControlAllowMethods>().unwrap();
-    assert_eq!(format!("{}", allow_methods),
+    assert_eq!(allow_methods.to_string(),
                "OPTIONS, GET, POST, PUT, DELETE, HEAD, TRACE, CONNECT, PATCH");
     let max_age = res.headers.get::<AccessControlMaxAge>().unwrap();
     assert_eq!(max_age.0, 60 * 60u32);
+    let vary = res.headers.get::<Vary>().unwrap();
+    assert_eq!(vary.to_string(),
+               "Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
 }
 
 #[test]
@@ -340,19 +298,18 @@ fn normal_request_sets_right_headers() {
                    .unwrap()
                    .to_string(),
                "http://www.a.com:8080");
-    assert!(res.headers .get::<AccessControlAllowCredentials>().is_none());
+    assert!(res.headers.get::<AccessControlAllowCredentials>().is_none());
     assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
     assert!(res.headers.get::<AccessControlMaxAge>().is_none());
     assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
+    assert_eq!(res.headers.get::<Vary>().unwrap().to_string(),
+               "Origin, Access-Control-Request-Method, Access-Control-Request-Headers");
 }
 
 #[test]
 fn expose_headers() {
     let cm1 = cors();
-    let cm = CorsMiddleware {
-        exposed_headers: vec![UniCase("X-ExposeMe".to_owned())],
-        ..cm1
-    };
+    let cm = CorsMiddleware { exposed_headers: vec![UniCase("X-ExposeMe".to_owned())], ..cm1 };
     let server = AutoServer::with_cors(cm);
     let client = Client::new();
     let mut headers = Headers::new();
@@ -369,7 +326,7 @@ fn expose_headers() {
                    .unwrap()
                    .to_string(),
                "http://www.a.com:8080");
-    assert!(res.headers .get::<AccessControlAllowCredentials>().is_none());
+    assert!(res.headers.get::<AccessControlAllowCredentials>().is_none());
     assert!(res.headers.get::<AccessControlAllowHeaders>().is_none());
     assert!(res.headers.get::<AccessControlMaxAge>().is_none());
     assert!(res.headers.get::<AccessControlAllowMethods>().is_none());
