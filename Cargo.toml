@@ -17,8 +17,8 @@ version = "0.1.3"
 repository = "atorstling/corsware"
 
 [dependencies]
-hyper = "0.10.5"
 iron = "0.5.1"
+hyper = "0.10.5"
 unicase = "1.4.0"
 url = "1.4.0"
 
