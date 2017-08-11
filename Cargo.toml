@@ -19,10 +19,9 @@ repository = "atorstling/corsware"
 [dependencies]
 hyper = "0.10.5"
 iron = "0.5.1"
-mount = "0.3.0"
-router = "0.5.1"
 unicase = "1.4.0"
 url = "1.4.0"
 
 [dev-dependencies]
 mount = "0.3.0"
+router = "0.5.1"
