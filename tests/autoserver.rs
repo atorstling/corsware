@@ -7,6 +7,7 @@ extern crate mount;
 
 use iron::prelude::*;
 use iron::Listening;
+use iron::Timeouts;
 use iron::status;
 use iron::middleware::Handler;
 use self::router::Router;
@@ -51,7 +52,13 @@ impl AutoServer {
     }
 
     pub fn with_handler<H: Handler>(handler: H) -> AutoServer {
-        let l = Iron::new(handler).http("127.0.0.1:0".to_owned()).unwrap();
+        let i = Iron {
+            handler: handler,
+            timeouts: Timeouts::default(),
+            threads: 1
+        };
+        let l = i.http("127.0.0.1:0".to_owned()).unwrap();
+        //let l = Iron::new(handler).http("127.0.0.1:0".to_owned()).unwrap();
         let p = l.socket.port();
         AutoServer {
             listening: l,
