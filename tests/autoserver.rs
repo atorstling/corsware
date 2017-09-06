@@ -54,7 +54,7 @@ impl AutoServer {
     pub fn with_handler<H: Handler>(handler: H) -> AutoServer {
         let i = Iron {
             handler: handler,
-            timeouts: Timeouts::default(),
+            timeouts: Timeouts { keep_alive: None, .. Timeouts::default()},
             threads: 1
         };
         let l = i.http("127.0.0.1:0".to_owned()).unwrap();

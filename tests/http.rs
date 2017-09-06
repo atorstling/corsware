@@ -27,10 +27,16 @@ use unicase::UniCase;
 mod autoserver;
 use autoserver::{AutoServer, cors};
 
+fn client() -> Client {
+    Client::with_pool_config(hyper::client::pool::Config{
+        max_idle: 1
+    })
+}
+
 #[test]
 fn normal_request_possible() {
     let server = AutoServer::new();
-    let client = Client::new();
+    let client = client();
     let res = client.get(&format!("http://127.0.0.1:{}/a", server.port)).send().unwrap();
     assert_eq!(res.status, status::ImATeapot);
 }
@@ -44,7 +50,7 @@ fn to_string(res: &mut hyper::client::Response) -> String {
 #[test]
 fn preflight_to_nonexistent_route_fails() {
     let server = AutoServer::new();
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
     headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
@@ -59,7 +65,7 @@ fn preflight_to_nonexistent_route_fails() {
 #[test]
 fn preflight_without_origin_is_bad_request() {
     let server = AutoServer::new();
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
     let mut res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
@@ -75,7 +81,7 @@ fn preflight_without_origin_is_bad_request() {
 #[test]
 fn preflight_with_allowed_origin_sets_all_headers() {
     let server = AutoServer::new();
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
     headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
@@ -106,7 +112,7 @@ fn preflight_with_allowed_origin_sets_all_headers() {
 fn disallowing_credentials_unsets_allow_credentials_header_in_response() {
     let c = CorsMiddleware { allow_credentials: false, ..cors() };
     let server = AutoServer::with_cors(c);
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
     headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
@@ -122,7 +128,7 @@ fn disallowing_credentials_unsets_allow_credentials_header_in_response() {
 fn allowing_credentials_sets_allow_credentials_header_in_response() {
     let c = CorsMiddleware { allow_credentials: true, ..cors() };
     let server = AutoServer::with_cors(c);
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
     headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
@@ -141,7 +147,7 @@ fn preflight_with_disallowed_origin_is_error() {
         vec![Origin::parse("http://www.a.com").unwrap()].into_iter().collect();
     cors.allowed_origins = AllowedOrigins::Specific(origins);
     let server = AutoServer::with_cors(cors);
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
     headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
@@ -171,7 +177,7 @@ fn preflight_with_null_origin_is_not_allowed_by_default() {
     // Seems as if Iron refuses to parse the Origin header if its null as is:
     // http://azerupi.github.io/mdBook/iron/headers/struct.Origin.html
     let server = AutoServer::new();
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
     headers.set(NullableOrigin("null".to_owned()));
@@ -193,7 +199,7 @@ fn preflight_with_null_origin_can_be_allowed() {
         ..cm
     };
     let server = AutoServer::with_cors(cors);
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
     headers.set(NullableOrigin("null".to_owned()));
@@ -210,7 +216,7 @@ fn preflight_with_null_origin_can_be_specifically_allowed() {
     let cm = cors();
     let cors = CorsMiddleware { allowed_origins: AllowedOrigins::Specific(origins), ..cm };
     let server = AutoServer::with_cors(cors);
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
     headers.set(NullableOrigin("null".to_owned()));
@@ -226,7 +232,7 @@ fn preflight_with_disallowed_header_is_error() {
     let mut cors = cors();
     cors.allowed_headers = vec![];
     let server = AutoServer::with_cors(cors);
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Get));
     let head_vec = vec![UniCase("DoesNotExist".to_owned())];
@@ -246,7 +252,7 @@ fn options_without_method_is_normal_request() {
     // A requestion with options and OriginHeader but without
     // method is considers non-preflight
     let server = AutoServer::new();
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(OriginHeader::from_str("http://a.com").unwrap());
     let mut res = client.request(Options, &format!("http://127.0.0.1:{}/a", server.port))
@@ -266,7 +272,7 @@ fn preflight_with_disallowed_method_is_error() {
     let cm = cors();
     let cm2 = CorsMiddleware { allowed_methods: vec![], ..cm };
     let server = AutoServer::with_cors(cm2);
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(AccessControlRequestMethod(Patch));
     headers.set(OriginHeader::from_str("http://a.com").unwrap());
@@ -285,7 +291,7 @@ fn preflight_with_disallowed_method_is_error() {
 fn normal_request_sets_right_headers() {
     let cm = cors();
     let server = AutoServer::with_cors(cm);
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
     let res = client.get(&format!("http://127.0.0.1:{}/a", server.port))
@@ -315,7 +321,7 @@ fn expose_headers() {
     let cm1 = cors();
     let cm = CorsMiddleware { exposed_headers: vec![UniCase("X-ExposeMe".to_owned())], ..cm1 };
     let server = AutoServer::with_cors(cm);
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
     let res = client.get(&format!("http://127.0.0.1:{}/a", server.port))
@@ -345,7 +351,7 @@ fn allow_credentials() {
         ..cm1
     };
     let server = AutoServer::with_cors(cm);
-    let client = Client::new();
+    let client = client();
     let mut headers = Headers::new();
     headers.set(OriginHeader::from_str("http://www.a.com:8080").unwrap());
     let res = client.get(&format!("http://127.0.0.1:{}/a", server.port))
@@ -373,7 +379,7 @@ fn allow_credentials() {
 #[test]
 fn normal_request_without_origin_is_passthrough() {
     let server = AutoServer::new();
-    let client = Client::new();
+    let client = client();
     let res = client.get(&format!("http://127.0.0.1:{}/a", server.port)).send().unwrap();
     assert_eq!(res.status, status::ImATeapot);
     assert!(res.headers.get::<AccessControlAllowOrigin>().is_none());
@@ -397,7 +403,7 @@ fn handler_ergonomy() {
 
     let server = AutoServer::with_handler(chain);
 
-    let client = Client::new();
+    let client = client();
     let res = client.get(&format!("http://127.0.0.1:{}", server.port)).send().unwrap();
     assert_eq!(res.status, status::ImATeapot);
 }
