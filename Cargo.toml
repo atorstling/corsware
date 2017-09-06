@@ -9,7 +9,7 @@ keywords = ["iron", "cors", "middleware", "cross-origin"]
 license = "MIT"
 name = "corsware"
 readme = "README.md"
-version = "0.1.5"
+version = "0.1.6-pre"
 
 [badges]
 
