@@ -2,7 +2,6 @@ extern crate url;
 extern crate iron;
 
 use self::url::Url;
-use std::ascii::AsciiExt;
 
 /// A struct which implements the concept 'Web Origin' as defined in
 /// https://tools.ietf.org/html/rfc6454.
