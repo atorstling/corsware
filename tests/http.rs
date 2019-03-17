@@ -249,8 +249,8 @@ fn preflight_with_disallowed_header_is_error() {
 
 #[test]
 fn options_without_method_is_normal_request() {
-    // A requestion with options and OriginHeader but without
-    // method is considers non-preflight
+    // A request with options and OriginHeader but without
+    // method is considered non-preflight
     let server = AutoServer::new();
     let client = client();
     let mut headers = Headers::new();
@@ -267,8 +267,6 @@ fn options_without_method_is_normal_request() {
 
 #[test]
 fn preflight_with_disallowed_method_is_error() {
-    // A requestion with options and OriginHeader but without
-    // method is considers non-preflight
     let cm = cors();
     let cm2 = CorsMiddleware { allowed_methods: vec![], ..cm };
     let server = AutoServer::with_cors(cm2);
