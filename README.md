@@ -27,8 +27,8 @@ fn main() {
 [CORS Spec]: https://www.w3.org/TR/cors/
 [Iron]: http://ironframework.io/
 
-# [Documentation](https://atorstling.github.io/corsware/corsware/index.html)
-https://atorstling.github.io/corsware/corsware/index.html
+# [Documentation]
+[https://docs.rs/corsware/0.2.0/corsware/](https://docs.rs/corsware/0.2.0/corsware/)
 
 ## Links
 [Origin Spec](https://tools.ietf.org/html/rfc6454)
