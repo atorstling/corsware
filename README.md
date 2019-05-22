@@ -27,7 +27,7 @@ fn main() {
 [CORS Spec]: https://www.w3.org/TR/cors/
 [Iron]: http://ironframework.io/
 
-# [Documentation]
+# Documentation
 [https://docs.rs/corsware/0.2.0/corsware/](https://docs.rs/corsware/0.2.0/corsware/)
 
 ## Links
